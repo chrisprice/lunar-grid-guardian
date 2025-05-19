@@ -13,17 +13,17 @@ This plan prioritizes getting a playable slice of the game up and running as qui
     *   Implement a simple `Mission Timer` that just counts real-world seconds elapsed. Display this in the TUI.
 3.  **Core Data Structures (Minimal):**
     *   Define `ColonyHealth` (0-100%).
-    *   Define `TotalGridSupply` and `TotalGridDemand` (as simple `f32` or `i32` for now).
+    *   Define `TotalGridSupply` and `TotalGridDemand` (as simple `Power` type or `f32` for now, to be `Power`).
 4.  **Simplest Power System - Reactor (Always On):**
     *   **Logic:**
-        *   Implement a `ReactorPowerOutput` variable. For now, make it a fixed value.
+        *   Implement a `ReactorPowerOutput` variable (type `Power`). For now, make it a fixed value.
         *   Set `TotalGridSupply` to be equal to `ReactorPowerOutput`.
     *   **UI (GO Panel - Minimal):**
         *   Display `TotalGridSupply` (simple text).
         *   Display `ColonyHealth` (simple text or a basic bar).
 5.  **Simplest Demand System - Life Support (Basic Drain):**
     *   **Logic:**
-        *   Implement a `LifeSupportPowerDemand` variable (fixed value).
+        *   Implement a `LifeSupportPowerDemand` variable (type `Power`, fixed value).
         *   Set `TotalGridDemand` to this value.
         *   If `TotalGridSupply < TotalGridDemand`, start slowly decreasing `ColonyHealth`.
         *   If `ColonyHealth` reaches 0, print "Game Over" and stop the loop (basic game over).
@@ -46,7 +46,7 @@ This plan prioritizes getting a playable slice of the game up and running as qui
         *   Display `Frequency Imbalance` (e.g., as a number, target 50Hz).
 8.  **Reactor Control (Basic):**
     *   **Logic:**
-        *   Allow player to increase/decrease `ReactorPowerOutput` via key presses (e.g., '+' and '-').
+        *   Allow player to increase/decrease `ReactorPowerOutput` (type `Power`) via key presses (e.g., '+' and '-').
         *   `TotalGridSupply` now dynamically updates based on this.
     *   **UI (Reactor Sub-Panel - Minimal):**
         *   Display current `ReactorPowerLevelOutput`.
