@@ -1,7 +1,9 @@
 use crate::game_variables::GameVariables;
 use crate::generator::GeneratorState;
-use uom::si::f32::Power;
-use uom::si::power::watt;
+use uom::si::f32::{Energy, Power, Time};
+use uom::si::power::{watt, kilowatt};
+use uom::si::energy::{kilowatt_hour, watt_hour};
+use uom::si::time::hour;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BatteryMode {
@@ -13,7 +15,7 @@ pub enum BatteryMode {
 #[derive(Debug)]
 pub struct Battery {
     pub generator_state: GeneratorState,
-    pub charge_percentage: f32, // 0.0 to 100.0
+    pub charge_percentage: f32,
     pub mode: BatteryMode,
 }
 
@@ -49,8 +51,8 @@ impl Battery {
     ) -> Power {
         self.generator_state.tick(mission_time_seconds);
 
-        // Assuming dt_seconds is always 1.0
-        let dt_hours = 1.0 / 3600.0;
+        let dt_hours_f32 = 1.0 / 3600.0;
+        let dt_as_time_quantity = Time::new::<hour>(dt_hours_f32);
 
         let GeneratorState::Online { damage_percentage } = self.generator_state else {
             return Power::new::<watt>(0.0);
@@ -59,57 +61,58 @@ impl Battery {
 
         match self.mode {
             BatteryMode::Charge => {
-                if self.charge_percentage < 100.0 {
-                    let energy_needed_to_full_kwh =
-                        ((100.0 - self.charge_percentage) / 100.0) * game_vars.battery_capacity_kwh;
-                    power_consumed = Power::new::<watt>(energy_needed_to_full_kwh / dt_hours);
-                    self.charge_percentage = 100.0;
+                let effective_capacity = game_vars.battery_capacity * (1.0 - (damage_percentage / 100.0));
+                let max_charge_as_power_quantity: Power = effective_capacity / dt_as_time_quantity;
+                
+                let max_charge_power_watts = Power::new::<watt>(max_charge_as_power_quantity.get::<kilowatt>() * 1000.0);
+                let actual_charge_power = (-power_imbalance).min(max_charge_power_watts);
+
+                if actual_charge_power > Power::new::<watt>(0.0) {
+                    let energy_added: Energy = actual_charge_power * dt_as_time_quantity;
+                    let current_energy_kwh = game_vars.battery_capacity * (self.charge_percentage / 100.0);
+                    
+                    let energy_added_kwh = Energy::new::<kilowatt_hour>(energy_added.get::<watt_hour>() / 1000.0);
+                    let new_energy_kwh = current_energy_kwh + energy_added_kwh;
+                    
+                    self.charge_percentage = ((new_energy_kwh / game_vars.battery_capacity).value * 100.0).min(100.0);
+                    power_consumed = actual_charge_power;
                 }
             }
             BatteryMode::Discharge => {
-                if self.charge_percentage > 0.0 {
-                    let energy_to_empty_kwh =
-                        (self.charge_percentage / 100.0) * game_vars.battery_capacity_kwh;
-                    power_consumed = Power::new::<watt>(-(energy_to_empty_kwh / dt_hours)); // Negative as supplying power
-                    self.charge_percentage = 0.0;
+                let current_energy_available = game_vars.battery_capacity * (self.charge_percentage / 100.0);
+                let effective_current_energy = current_energy_available * (1.0 - (damage_percentage / 100.0));
+                let max_discharge_as_power_quantity: Power = effective_current_energy / dt_as_time_quantity;
+
+                let max_discharge_power_watts = Power::new::<watt>(max_discharge_as_power_quantity.get::<kilowatt>() * 1000.0);
+                let actual_discharge_power = power_imbalance.min(max_discharge_power_watts);
+
+                if actual_discharge_power > Power::new::<watt>(0.0) {
+                    let energy_removed: Energy = actual_discharge_power * dt_as_time_quantity;
+                    let current_energy_kwh = game_vars.battery_capacity * (self.charge_percentage / 100.0);
+
+                    let energy_removed_kwh = Energy::new::<kilowatt_hour>(energy_removed.get::<watt_hour>() / 1000.0);
+                    let new_energy_kwh = current_energy_kwh - energy_removed_kwh;
+
+                    self.charge_percentage = ((new_energy_kwh / game_vars.battery_capacity).value * 100.0).max(0.0);
+                    power_consumed = -actual_discharge_power;
                 }
             }
             BatteryMode::Auto if damage_percentage == 0.0 => {
-                if power_imbalance.value > 0.0 && self.charge_percentage > 0.0 {
-                    // Grid needs power, battery has charge
-                    let energy_needed_by_grid_kwh = power_imbalance.value * dt_hours;
-                    let energy_in_battery_kwh =
-                        (self.charge_percentage / 100.0) * game_vars.battery_capacity_kwh;
+                if power_imbalance < Power::new::<watt>(0.0) {
+                    let charge_power = -power_imbalance;
+                    let energy_added: Energy = charge_power * dt_as_time_quantity;
+                    let current_energy_kwh = game_vars.battery_capacity * (self.charge_percentage / 100.0);
 
-                    let energy_to_discharge_kwh =
-                        energy_needed_by_grid_kwh.min(energy_in_battery_kwh);
+                    let energy_added_kwh = Energy::new::<kilowatt_hour>(energy_added.get::<watt_hour>() / 1000.0);
+                    let new_energy_kwh = current_energy_kwh + energy_added_kwh;
 
-                    if energy_to_discharge_kwh > 0.0 {
-                        self.charge_percentage -=
-                            (energy_to_discharge_kwh / game_vars.battery_capacity_kwh) * 100.0;
-                        self.charge_percentage = self.charge_percentage.max(0.0); // Ensure not negative
-                        power_consumed = Power::new::<watt>(-(energy_to_discharge_kwh / dt_hours));
-                    }
-                } else if power_imbalance.value < 0.0 && self.charge_percentage < 100.0 {
-                    // Grid has surplus, battery can charge
-                    let surplus_energy_on_grid_kwh = -power_imbalance.value * dt_hours;
-                    let remaining_capacity_kwh =
-                        ((100.0 - self.charge_percentage) / 100.0) * game_vars.battery_capacity_kwh;
-
-                    let energy_to_charge_kwh =
-                        surplus_energy_on_grid_kwh.min(remaining_capacity_kwh);
-
-                    if energy_to_charge_kwh > 0.0 {
-                        self.charge_percentage +=
-                            (energy_to_charge_kwh / game_vars.battery_capacity_kwh) * 100.0;
-                        self.charge_percentage = self.charge_percentage.min(100.0); // Ensure not over 100
-                        power_consumed = Power::new::<watt>(energy_to_charge_kwh / dt_hours);
-                    }
+                    self.charge_percentage = ((new_energy_kwh / game_vars.battery_capacity).value * 100.0).min(100.0);
+                    power_consumed = charge_power;
+                } else if power_imbalance > Power::new::<watt>(0.0) {
                 }
             }
             BatteryMode::Auto => {
-                // If the battery is damaged, auto mode is disabled
-                // and the battery will not charge or discharge.
+                power_consumed = Power::new::<watt>(0.0);
             }
         }
         power_consumed

@@ -1,4 +1,5 @@
-use uom::si::f32::Power;
+use uom::si::f32::{Energy, Power};
+use uom::si::energy::kilowatt_hour;
 use uom::si::power::watt;
 
 /// Game balancing variables as specified in README.md Table 1.
@@ -15,7 +16,7 @@ pub struct GameVariables {
     /// Solar Array - Nominal Output (Power units)
     pub solar_nominal_output: Power,
     /// Battery Capacity (kWh)
-    pub battery_capacity_kwh: f32,
+    pub battery_capacity: Energy,
     /// Reactor - Nominal Output (Power units)
     pub reactor_nominal_output: Power,
     /// Reactor Max Coolant Capacity (percentage 0-100)
@@ -72,7 +73,7 @@ impl Default for GameVariables {
             mission_time_scale_factor: 1.0 / (29.5 * 24.0 * 60.0), // one lunar day every 1 minute
             repair_time_per_damage_unit: 2.0, // This value will be used for Solar, Battery, and Reactor repairs
             solar_nominal_output: Power::new::<watt>(100.0),
-            battery_capacity_kwh: 200.0,
+            battery_capacity: Energy::new::<kilowatt_hour>(200.0),
             reactor_nominal_output: Power::new::<watt>(500.0),
             reactor_max_coolant_percentage: 100.0,
             reactor_coolant_refill_rate: 1.0,
