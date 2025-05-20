@@ -1,8 +1,9 @@
 use crate::tick_context::TickContext;
 use uom::si::f32::Time;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum OperationsState {
+    #[default]
     // Dormant: waiting for next supply drop to be scheduled.
     Dormant,
     // Supply drop is scheduled to arrive (become AwaitingAuthorization) at event_start.

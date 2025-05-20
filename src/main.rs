@@ -23,7 +23,7 @@ impl <'a> App<'a> {
     fn new(game_vars: &'a GameVariables) -> App {
         App {
             last_tick: Instant::now(),
-            game_state: GameState::new(&game_vars),
+            game_state: GameState::new(game_vars),
         }
     }
 }

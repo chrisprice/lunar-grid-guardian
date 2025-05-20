@@ -10,6 +10,12 @@ pub enum GeneratorState {
     Repairing { event_end: Time },
 }
 
+impl Default for GeneratorState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GeneratorState {
     pub fn new() -> Self {
         GeneratorState::Online {

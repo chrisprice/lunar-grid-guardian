@@ -8,9 +8,9 @@ use crate::solar::SolarState;
 use crate::tick_context::TickContext;
 use uom::si::f32::{Frequency, Power, Ratio, Time};
 use uom::si::frequency::hertz;
-use uom::si::power::watt;
 use uom::si::ratio::percent;
 use uom::si::time::second;
+use uom::ConstZero;
 
 pub struct GameState<'a> {
     /// Game variables for the current game.
@@ -64,12 +64,12 @@ impl<'a> GameState<'a> {
     pub fn new(game_vars: &'a GameVariables) -> Self {
         GameState {
             game_vars,
-            mission_time: Time::new::<second>(0.0),
-            last_tick_time: Time::new::<second>(0.0),
-            total_grid_supply: Power::new::<watt>(0.0),
-            total_grid_demand: Power::new::<watt>(0.0),
+            mission_time: Time::ZERO,
+            last_tick_time: Time::ZERO,
+            total_grid_supply: Power::ZERO,
+            total_grid_demand: Power::ZERO,
             frequency_hz: game_vars.nominal_frequency,
-            colony_damage: Ratio::new::<percent>(0.0),
+            colony_damage: Ratio::ZERO,
             comms_online: true,
             operations_online: true,
             life_support_emergency: false,
@@ -77,7 +77,7 @@ impl<'a> GameState<'a> {
             battery: Battery::new(),
             reactor_state: GeneratorState::new(),
             reactor_coolant: Ratio::new::<percent>(100.0),
-            reactor_power: Power::new::<watt>(0.0),
+            reactor_power: Power::ZERO,
             reactor_temperature: 0.0,
             boost_life_support: 0,
             boost_battery: 0,
