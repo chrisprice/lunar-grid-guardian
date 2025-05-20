@@ -1,4 +1,4 @@
-use crate::game_variables::GameVariables;
+use crate::tick_context::TickContext;
 use uom::si::f32::Time;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -19,13 +19,13 @@ impl OperationsState {
 
     /// Ticks the state.
     /// Returns true if docking is completed.
-    pub fn tick(&mut self, current_mission_time: Time) -> bool{
+    pub fn tick(&mut self, context: &TickContext) -> bool{
         let mut docking_completed = false;
         *self = match self {
-            OperationsState::Scheduled { event_start } if current_mission_time >= *event_start => {
+            OperationsState::Scheduled { event_start } if context.mission_time >= *event_start => {
                 OperationsState::AwaitingAuthorization
             }
-            OperationsState::DockingInProgress { event_end } if current_mission_time >= *event_end => {
+            OperationsState::DockingInProgress { event_end } if context.mission_time >= *event_end => {
                 docking_completed = true;
                 OperationsState::Dormant
             }
@@ -40,11 +40,9 @@ impl OperationsState {
     /// Attempts to authorize docking.
     /// GameState should ensure operations are online before calling this.
     /// Returns true if authorization was successful and docking started.
-    pub fn authorize_docking(&mut self, current_mission_time: Time, game_vars: &GameVariables) -> bool {
+    pub fn authorize_docking(&mut self, context: &TickContext) -> bool {
         if matches!(self, OperationsState::AwaitingAuthorization) {
-            *self = OperationsState::DockingInProgress {
-                event_end: current_mission_time + game_vars.supply_drop_docking_duration,
-            };
+            *self = OperationsState::DockingInProgress { event_end: context.mission_time + context.game_vars.supply_drop_docking_duration };
             true
         } else {
             false

@@ -1,4 +1,5 @@
 use crate::game_variables::GameVariables;
+use crate::tick_context::TickContext;
 use uom::si::f32::Time;
 use uom::si::time::second;
 
@@ -52,13 +53,13 @@ impl GeneratorState {
 
     /// Checks if repair is complete and updates state accordingly.
     /// Call this on each game tick for systems that can be repaired.
-    pub fn tick(&mut self, current_mission_time: Time) {
+    pub fn tick(&mut self, context: &TickContext) {
         if let GeneratorState::Repairing {
             event_end: repair_finish_time,
             ..
         } = self
         {
-            if current_mission_time >= *repair_finish_time {
+            if context.mission_time >= *repair_finish_time {
                 *self = GeneratorState::Online {
                     damage_percentage: 0.0,
                 };

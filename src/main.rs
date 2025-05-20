@@ -11,17 +11,8 @@ use ratatui::{
 };
 use std::{error::Error, io, time::{Duration, Instant}};
 
-mod battery;
-mod event_state;
-mod game_state;
-mod game_variables;
-mod generator;
-mod lunar_phase;
-mod operations;
-mod solar;
-
-use game_state::GameState;
-use game_variables::GameVariables;
+use lunar_grid_guardian::game_state::GameState;
+use lunar_grid_guardian::game_variables::GameVariables;
 
 struct App {
     last_tick: Instant,

@@ -4,10 +4,11 @@ use crate::game_variables::GameVariables;
 use crate::generator::GeneratorState;
 use crate::lunar_phase::{LUNAR_DAY_SECONDS, LunarPhase};
 use crate::operations::OperationsState;
+use crate::solar::SolarState;
+use crate::tick_context::TickContext;
 use uom::si::f32::{Power, Time};
 use uom::si::power::watt;
 use uom::si::time::second;
-use crate::solar::SolarState;
 
 pub struct GameState {
     /// Real time since the start of the mission.
@@ -128,8 +129,8 @@ impl GameState {
         };
         self.frequency_hz + rocof * tick_duration
     }
-    pub fn tick_operations(&mut self) {
-        let docking_completed = self.supply_drop_flow_state.tick(self.mission_time);
+    pub fn tick_operations(&mut self, context: &TickContext) {
+        let docking_completed = self.supply_drop_flow_state.tick(context);
 
         if docking_completed {
             todo!("Award player with a random boost");
@@ -139,28 +140,30 @@ impl GameState {
     pub fn tick(&mut self, game_vars: &GameVariables) {
         self.mission_time += Time::new::<second>(1.0);
 
+        let context = &TickContext {
+            game_vars,
+            mission_time: self.mission_time,
+            tick_delta: self.mission_time - self.last_tick_time,
+        };
+
         // Event state ticks
-        self.micrometeorite_event.tick(self.mission_time);
-        self.lunar_quake_event.tick(self.mission_time);
-        self.solar_flare_event.tick(self.mission_time);
+        self.micrometeorite_event.tick(context);
+        self.lunar_quake_event.tick(context);
+        self.solar_flare_event.tick(context);
 
         // Solar system tick (handles repair) and get power generation
         let lunar_phase = self.lunar_phase_and_time(game_vars);
-        let solar_power =
-            self.solar
-                .tick(self.mission_time, &lunar_phase, game_vars);
+        let solar_power = self.solar.tick(&lunar_phase, context);
 
         // Reactor system tick (handles repair)
-        self.reactor_state.tick(self.mission_time);
+        self.reactor_state.tick(context);
         // TODO: Get reactor power output, e.g.,
         // let reactor_power_output = calculate_reactor_power(&self.reactor_state, self.reactor_power, game_vars);
 
         // Battery tick
         // Calculate power imbalance before battery acts
         let power_imbalance = self.total_grid_demand - self.total_grid_supply;
-        let power_consumed_by_battery =
-            self.battery
-                .tick(power_imbalance, self.mission_time, game_vars);
+        let power_consumed_by_battery = self.battery.tick(context, power_imbalance);
         // If battery consumes power (charges), it increases demand.
         // If battery supplies power (discharges), it increases supply.
         if power_consumed_by_battery.value > 0.0 {
@@ -170,7 +173,7 @@ impl GameState {
         }
         self.frequency_hz = self.tick_frequency_hz(game_vars);
 
-        self.tick_operations();
+        self.tick_operations(context);
 
         self.last_tick_time = self.mission_time;
     }
