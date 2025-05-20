@@ -6,12 +6,16 @@ use crate::lunar_phase::{LUNAR_DAY_SECONDS, LunarPhase};
 use crate::operations::OperationsState;
 use crate::solar::SolarState;
 use crate::tick_context::TickContext;
-use uom::si::f32::{Frequency, Power, Time};
+use uom::si::f32::{Frequency, Power, Ratio, Time};
 use uom::si::frequency::hertz;
 use uom::si::power::watt;
+use uom::si::ratio::percent;
 use uom::si::time::second;
 
-pub struct GameState {
+pub struct GameState<'a> {
+    /// Game variables for the current game.
+    pub game_vars: &'a GameVariables,
+
     /// Real time since the start of the mission.
     pub mission_time: Time,
     /// Last tick time since the start of the mission.
@@ -23,7 +27,7 @@ pub struct GameState {
     pub frequency_hz: Frequency,
 
     // Damage status (0-100%, where 0% is no damage)
-    pub colony_damage: f32, // 0-100%
+    pub colony_damage: Ratio, // 0-100%
 
     pub comms_online: bool,
     pub operations_online: bool,
@@ -37,7 +41,7 @@ pub struct GameState {
 
     // Reactor specific state (0-100%)
     pub reactor_state: GeneratorState,
-    pub reactor_coolant: f32,
+    pub reactor_coolant: Ratio,
     pub reactor_power: Power,
     pub reactor_temperature: f32,
 
@@ -56,22 +60,23 @@ pub struct GameState {
     pub supply_drop_flow_state: OperationsState,
 }
 
-impl GameState {
-    pub fn new(game_vars: &GameVariables) -> Self {
+impl<'a> GameState<'a> {
+    pub fn new(game_vars: &'a GameVariables) -> Self {
         GameState {
+            game_vars,
             mission_time: Time::new::<second>(0.0),
             last_tick_time: Time::new::<second>(0.0),
             total_grid_supply: Power::new::<watt>(0.0),
             total_grid_demand: Power::new::<watt>(0.0),
             frequency_hz: game_vars.nominal_frequency,
-            colony_damage: 0.0,
-            solar: SolarState::new(),
-            battery: Battery::new(),
-            reactor_state: GeneratorState::new(),
-            reactor_coolant: 0.0,
+            colony_damage: Ratio::new::<percent>(0.0),
             comms_online: true,
             operations_online: true,
             life_support_emergency: false,
+            solar: SolarState::new(),
+            battery: Battery::new(),
+            reactor_state: GeneratorState::new(),
+            reactor_coolant: Ratio::new::<percent>(100.0),
             reactor_power: Power::new::<watt>(0.0),
             reactor_temperature: 0.0,
             boost_life_support: 0,
@@ -86,8 +91,8 @@ impl GameState {
     }
 
     /// Returns the current lunar phase and time in cycle, derived from mission time and scaling factor.
-    pub fn lunar_phase_and_time(&self, game_vars: &GameVariables) -> LunarPhase {
-        let lunar_seconds = self.mission_time.get::<second>() / game_vars.mission_time_scale_factor;
+    pub fn lunar_phase_and_time(&self) -> LunarPhase {
+        let lunar_seconds = self.mission_time.get::<second>() / self.game_vars.mission_time_scale_factor;
         let time_in_cycle = lunar_seconds % LUNAR_DAY_SECONDS;
         if time_in_cycle < (LUNAR_DAY_SECONDS / 2.0) {
             LunarPhase::Day {
@@ -101,21 +106,21 @@ impl GameState {
     }
 
     /// Returns true if the game is over, based on colony damage or frequency deviation.
-    pub fn is_game_over(&self, game_vars: &GameVariables) -> bool {
-        self.colony_damage >= 100.0
-            || (self.tick_frequency_hz(game_vars) - game_vars.nominal_frequency)
+    pub fn is_game_over(&self) -> bool {
+        self.colony_damage.get::<percent>() >= 100.0
+            || (self.tick_frequency_hz() - self.game_vars.nominal_frequency)
                 .abs()
                 .get::<hertz>()
                 > 0.5
     }
 
     /// Derives the next frequency_hz value based on the swing equation and current state.
-    pub fn tick_frequency_hz(&self, game_vars: &GameVariables) -> Frequency {
+    pub fn tick_frequency_hz(&self) -> Frequency {
         let power_imbalance = self.total_grid_demand - self.total_grid_supply;
         let delta_p = power_imbalance;
-        let h = game_vars.system_inertia_h;
-        let pnom = game_vars.system_nominal_power_pnom;
-        let f0 = game_vars.nominal_frequency;
+        let h = self.game_vars.system_inertia_h;
+        let pnom = self.game_vars.system_nominal_power_pnom;
+        let f0 = self.game_vars.nominal_frequency;
 
         // Rate of Change of Frequency (RoCoF)
         let rocof_value = if pnom.value == 0.0 || h.value == 0.0 || f0.value == 0.0 {
@@ -142,11 +147,11 @@ impl GameState {
         }
     }
 
-    pub fn tick(&mut self, game_vars: &GameVariables) {
+    pub fn tick(&mut self) {
         self.mission_time += Time::new::<second>(1.0);
 
         let context = &TickContext {
-            game_vars,
+            game_vars: self.game_vars,
             mission_time: self.mission_time,
             tick_delta: self.mission_time - self.last_tick_time,
         };
@@ -157,7 +162,7 @@ impl GameState {
         self.solar_flare_event.tick(context);
 
         // Solar system tick (handles repair) and get power generation
-        let lunar_phase = self.lunar_phase_and_time(game_vars);
+        let lunar_phase = self.lunar_phase_and_time();
         let solar_power = self.solar.tick(&lunar_phase, context);
 
         // Reactor system tick (handles repair)
@@ -176,7 +181,7 @@ impl GameState {
         } else if power_consumed_by_battery.value < 0.0 {
             self.total_grid_supply += -power_consumed_by_battery; // Add the absolute value
         }
-        self.frequency_hz = self.tick_frequency_hz(game_vars);
+        self.frequency_hz = self.tick_frequency_hz();
 
         self.tick_operations(context);
 

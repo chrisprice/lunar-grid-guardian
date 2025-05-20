@@ -14,18 +14,16 @@ use std::{error::Error, io, time::{Duration, Instant}};
 use lunar_grid_guardian::game_state::GameState;
 use lunar_grid_guardian::game_variables::GameVariables;
 
-struct App {
+struct App<'a> {
     last_tick: Instant,
-    game_state: GameState,
-    game_vars: GameVariables,
+    game_state: GameState<'a>,
 }
 
-impl App {
-    fn new() -> App {
+impl <'a> App<'a> {
+    fn new(game_vars: &'a GameVariables) -> App {
         App {
             last_tick: Instant::now(),
-            game_state: GameState::new(),
-            game_vars: GameVariables::default(),
+            game_state: GameState::new(&game_vars),
         }
     }
 }
@@ -37,7 +35,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new();
+    let game_vars = GameVariables::default();
+    let mut app = App::new(&game_vars);
     let res = run_app(&mut terminal, &mut app);
 
     disable_raw_mode()?;
@@ -58,7 +57,7 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut A
     loop {
         let tick_rate = Duration::from_secs(1);
         if app.last_tick.elapsed() >= tick_rate {
-            app.game_state.tick(&app.game_vars);
+            app.game_state.tick();
             app.last_tick += tick_rate;
         }
         terminal.draw(|f| ui(f, app))?;
