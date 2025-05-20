@@ -1,4 +1,5 @@
 use crate::game_variables::GameVariables;
+use uom::si::time::second;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GeneratorState {
@@ -28,7 +29,7 @@ impl GeneratorState {
             }; // No damage to repair
         }
 
-        let repair_duration_seconds = initial_damage * game_vars.repair_time_per_damage_unit;
+        let repair_duration_seconds = initial_damage * game_vars.repair_time_per_damage_unit.get::<second>();
         let event_end = current_mission_time + repair_duration_seconds as u32;
 
         GeneratorState::Repairing { event_end }

@@ -1,4 +1,5 @@
 use crate::game_variables::GameVariables;
+use uom::si::time::second;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationsState {
@@ -42,7 +43,7 @@ impl OperationsState {
     pub fn authorize_docking(&mut self, current_mission_time: u32, game_vars: &GameVariables) -> bool {
         if matches!(self, OperationsState::AwaitingAuthorization) {
             *self = OperationsState::DockingInProgress {
-                event_end: current_mission_time + game_vars.supply_drop_docking_duration as u32,
+                event_end: current_mission_time + game_vars.supply_drop_docking_duration.get::<second>() as u32,
             };
             true
         } else {

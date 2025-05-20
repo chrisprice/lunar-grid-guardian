@@ -1,18 +1,19 @@
-use uom::si::f32::{Energy, Power};
+use uom::si::f32::{Energy, Power, Time};
 use uom::si::energy::kilowatt_hour;
 use uom::si::power::watt;
+use uom::si::time::second;
 
 /// Game balancing variables as specified in README.md Table 1.
 pub struct GameVariables {
     /// System Inertia Constant (seconds)
-    pub system_inertia_h: f32,
+    pub system_inertia_h: Time,
     /// Nominal System Power Capacity (Power units)
     pub system_nominal_power_pnom: Power,
     /// Mission Timer - Scaling Factor (real seconds to lunar seconds)
     /// (1 real second = 1 lunar second / scaling factor)
     pub mission_time_scale_factor: f32,
     /// Repair Duration (seconds per % damage) - Consolidated for all repairable systems
-    pub repair_time_per_damage_unit: f32,
+    pub repair_time_per_damage_unit: Time,
     /// Solar Array - Nominal Output (Power units)
     pub solar_nominal_output: Power,
     /// Battery Capacity (kWh)
@@ -50,28 +51,25 @@ pub struct GameVariables {
     /// Operations - Docking Power Spike Magnitude (Power units)
     pub operations_docking_spike_power: Power,
     /// Operations - Docking Power Spike Duration (seconds)
-    pub operations_docking_spike_duration: f32,
+    pub operations_docking_spike_duration: Time,
     /// Supply Drop - Timer Interval (seconds)
-    pub supply_drop_interval: f32,
-    /// Supply Drop - Docking Sequence Duration (seconds)
-    pub supply_drop_docking_duration: f32,
-    /// Boost Item - Life Support Effect (percentage points)
+    pub supply_drop_interval: Time,
+    /// Supply Drop - Docking Duration (seconds)
+    pub supply_drop_docking_duration: Time,
+    /// Boost amounts - these are not time-based, should remain f32 or be reviewed separately
     pub boost_life_support_amount: f32,
-    /// Boost Item - Battery Effect (percentage points)
     pub boost_battery_amount: f32,
-    /// Boost Item - Coolant Effect (percentage points)
     pub boost_coolant_amount: f32,
-    /// Boost Item - Repair Effect (damage % points)
     pub boost_repair_amount: f32,
 }
 
 impl Default for GameVariables {
     fn default() -> Self {
         GameVariables {
-            system_inertia_h: 10.0,
+            system_inertia_h: Time::new::<second>(10.0),
             system_nominal_power_pnom: Power::new::<watt>(1000.0),
             mission_time_scale_factor: 1.0 / (29.5 * 24.0 * 60.0), // one lunar day every 1 minute
-            repair_time_per_damage_unit: 2.0, // This value will be used for Solar, Battery, and Reactor repairs
+            repair_time_per_damage_unit: Time::new::<second>(2.0), // This value will be used for Solar, Battery, and Reactor repairs
             solar_nominal_output: Power::new::<watt>(100.0),
             battery_capacity: Energy::new::<kilowatt_hour>(200.0),
             reactor_nominal_output: Power::new::<watt>(500.0),
@@ -90,9 +88,9 @@ impl Default for GameVariables {
             solar_flare_spike_damage_battery: 10.0,
             operations_base_power_demand: Power::new::<watt>(30.0),
             operations_docking_spike_power: Power::new::<watt>(100.0),
-            operations_docking_spike_duration: 5.0,
-            supply_drop_interval: 60.0,
-            supply_drop_docking_duration: 10.0,
+            operations_docking_spike_duration: Time::new::<second>(5.0),
+            supply_drop_interval: Time::new::<second>(60.0),
+            supply_drop_docking_duration: Time::new::<second>(10.0),
             boost_life_support_amount: 10.0,
             boost_battery_amount: 20.0,
             boost_coolant_amount: 20.0,
