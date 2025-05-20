@@ -6,7 +6,8 @@ use crate::lunar_phase::{LUNAR_DAY_SECONDS, LunarPhase};
 use crate::operations::OperationsState;
 use crate::solar::SolarState;
 use crate::tick_context::TickContext;
-use uom::si::f32::{Power, Time};
+use uom::si::f32::{Frequency, Power, Time};
+use uom::si::frequency::hertz;
 use uom::si::power::watt;
 use uom::si::time::second;
 
@@ -19,7 +20,7 @@ pub struct GameState {
     // Grid metrics
     pub total_grid_supply: Power,
     pub total_grid_demand: Power,
-    pub frequency_hz: f32,
+    pub frequency_hz: Frequency,
 
     // Health status (0-100%)
     pub colony_health: f32, // 0-100%
@@ -56,23 +57,23 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new() -> Self {
+    pub fn new(game_vars: &GameVariables) -> Self {
         GameState {
             mission_time: Time::new::<second>(0.0),
             last_tick_time: Time::new::<second>(0.0),
             total_grid_supply: Power::new::<watt>(0.0),
             total_grid_demand: Power::new::<watt>(0.0),
-            frequency_hz: 50.0,
-            colony_health: 100.0,
-            solar: SolarState::new(), // Updated to use new SolarState
+            frequency_hz: game_vars.nominal_frequency,
+            colony_health: 0.0,
+            solar: SolarState::new(),
             battery: Battery::new(),
             reactor_state: GeneratorState::new(),
-            reactor_coolant: 100.0,
+            reactor_coolant: 0.0,
             comms_online: true,
             operations_online: true,
             life_support_emergency: false,
-            reactor_power: Power::new::<watt>(50.0),
-            reactor_temperature: 25.0,
+            reactor_power: Power::new::<watt>(0.0),
+            reactor_temperature: 0.0,
             boost_life_support: 0,
             boost_battery: 0,
             boost_coolant: 0,
@@ -102,32 +103,37 @@ impl GameState {
     /// Returns true if the game is over, based on colony health or frequency deviation.
     pub fn is_game_over(&self, game_vars: &GameVariables) -> bool {
         // Game Over if colony health reaches 0% or frequency deviates by more than ±0.5Hz from 50Hz
-        self.colony_health <= 0.0 || (self.tick_frequency_hz(game_vars) - 50.0).abs() > 0.5
+        self.colony_health <= 0.0
+            || (self.tick_frequency_hz(game_vars) - game_vars.nominal_frequency)
+                .abs()
+                .get::<hertz>()
+                > 0.5
     }
 
     /// Derives the next frequency_hz value based on the swing equation and current state.
-    pub fn tick_frequency_hz(&self, game_vars: &GameVariables) -> f32 {
+    pub fn tick_frequency_hz(&self, game_vars: &GameVariables) -> Frequency {
         let power_imbalance = self.total_grid_demand - self.total_grid_supply;
         let delta_p = power_imbalance;
         let h = game_vars.system_inertia_h;
         let pnom = game_vars.system_nominal_power_pnom;
-        let f0 = 50.0; // Nominal frequency in Hz
+        let f0 = game_vars.nominal_frequency;
 
         // Rate of Change of Frequency (RoCoF)
-        let rocof = if pnom.value == 0.0 || h.value == 0.0 {
-            0.0 // Avoid division by zero if system nominal power or inertia is zero
+        let rocof_value = if pnom.value == 0.0 || h.value == 0.0 || f0.value == 0.0 {
+            0.0 // Avoid division by zero
         } else {
             (delta_p / (2.0 * h * (pnom / f0))).value
         };
+        let rocof = Frequency::new::<hertz>(rocof_value);
 
         // New frequency = current + (rate of change * tick duration)
         // Ensure last_tick_time is not greater than mission_time to prevent negative duration
-        let tick_duration = if self.mission_time > self.last_tick_time {
+        let tick_duration_seconds = if self.mission_time > self.last_tick_time {
             (self.mission_time - self.last_tick_time).get::<second>()
         } else {
             0.0 // Or handle as an error/log, but for tick logic, 0 duration is safer
         };
-        self.frequency_hz + rocof * tick_duration
+        self.frequency_hz + rocof * tick_duration_seconds
     }
     pub fn tick_operations(&mut self, context: &TickContext) {
         let docking_completed = self.supply_drop_flow_state.tick(context);
