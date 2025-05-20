@@ -1,6 +1,7 @@
 use crate::game_variables::GameVariables;
 use crate::generator::GeneratorState;
-use crate::power::Power;
+use uom::si::f32::Power;
+use uom::si::power::watt;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BatteryMode {
@@ -52,16 +53,16 @@ impl Battery {
         let dt_hours = 1.0 / 3600.0;
 
         let GeneratorState::Online { damage_percentage } = self.generator_state else {
-            return Power::new(0.0);
+            return Power::new::<watt>(0.0);
         };
-        let mut power_consumed = Power::new(0.0);
+        let mut power_consumed = Power::new::<watt>(0.0);
 
         match self.mode {
             BatteryMode::Charge => {
                 if self.charge_percentage < 100.0 {
                     let energy_needed_to_full_kwh =
                         ((100.0 - self.charge_percentage) / 100.0) * game_vars.battery_capacity_kwh;
-                    power_consumed = Power::new(energy_needed_to_full_kwh / dt_hours);
+                    power_consumed = Power::new::<watt>(energy_needed_to_full_kwh / dt_hours);
                     self.charge_percentage = 100.0;
                 }
             }
@@ -69,14 +70,14 @@ impl Battery {
                 if self.charge_percentage > 0.0 {
                     let energy_to_empty_kwh =
                         (self.charge_percentage / 100.0) * game_vars.battery_capacity_kwh;
-                    power_consumed = Power::new(-(energy_to_empty_kwh / dt_hours)); // Negative as supplying power
+                    power_consumed = Power::new::<watt>(-(energy_to_empty_kwh / dt_hours)); // Negative as supplying power
                     self.charge_percentage = 0.0;
                 }
             }
             BatteryMode::Auto if damage_percentage == 0.0 => {
-                if power_imbalance.0 > 0.0 && self.charge_percentage > 0.0 {
+                if power_imbalance.value > 0.0 && self.charge_percentage > 0.0 {
                     // Grid needs power, battery has charge
-                    let energy_needed_by_grid_kwh = power_imbalance.0 * dt_hours;
+                    let energy_needed_by_grid_kwh = power_imbalance.value * dt_hours;
                     let energy_in_battery_kwh =
                         (self.charge_percentage / 100.0) * game_vars.battery_capacity_kwh;
 
@@ -87,11 +88,11 @@ impl Battery {
                         self.charge_percentage -=
                             (energy_to_discharge_kwh / game_vars.battery_capacity_kwh) * 100.0;
                         self.charge_percentage = self.charge_percentage.max(0.0); // Ensure not negative
-                        power_consumed = Power::new(-(energy_to_discharge_kwh / dt_hours));
+                        power_consumed = Power::new::<watt>(-(energy_to_discharge_kwh / dt_hours));
                     }
-                } else if power_imbalance.0 < 0.0 && self.charge_percentage < 100.0 {
+                } else if power_imbalance.value < 0.0 && self.charge_percentage < 100.0 {
                     // Grid has surplus, battery can charge
-                    let surplus_energy_on_grid_kwh = -power_imbalance.0 * dt_hours;
+                    let surplus_energy_on_grid_kwh = -power_imbalance.value * dt_hours;
                     let remaining_capacity_kwh =
                         ((100.0 - self.charge_percentage) / 100.0) * game_vars.battery_capacity_kwh;
 
@@ -102,7 +103,7 @@ impl Battery {
                         self.charge_percentage +=
                             (energy_to_charge_kwh / game_vars.battery_capacity_kwh) * 100.0;
                         self.charge_percentage = self.charge_percentage.min(100.0); // Ensure not over 100
-                        power_consumed = Power::new(energy_to_charge_kwh / dt_hours);
+                        power_consumed = Power::new::<watt>(energy_to_charge_kwh / dt_hours);
                     }
                 }
             }

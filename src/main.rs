@@ -19,8 +19,6 @@ mod lunar_phase;
 mod operations;
 mod generator;
 mod solar;
-mod power;
-mod energy;
 
 use game_state::GameState;
 use game_variables::GameVariables;

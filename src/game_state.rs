@@ -4,7 +4,8 @@ use crate::game_variables::GameVariables;
 use crate::generator::GeneratorState;
 use crate::lunar_phase::{LUNAR_DAY_SECONDS, LunarPhase};
 use crate::operations::OperationsState;
-use crate::power::Power; // Added import
+use uom::si::f32::Power;
+use uom::si::power::watt;
 use crate::solar::SolarState;
 
 pub struct GameState {
@@ -57,8 +58,8 @@ impl GameState {
         GameState {
             mission_time_seconds: 0,
             last_tick_time_seconds: 0,
-            total_grid_supply: Power::new(0.0),
-            total_grid_demand: Power::new(0.0),
+            total_grid_supply: Power::new::<watt>(0.0),
+            total_grid_demand: Power::new::<watt>(0.0),
             frequency_hz: 50.0,
             colony_health: 100.0,
             solar: SolarState::new(), // Updated to use new SolarState
@@ -68,7 +69,7 @@ impl GameState {
             comms_online: true,
             operations_online: true,
             life_support_emergency: false,
-            reactor_power: Power::new(50.0),
+            reactor_power: Power::new::<watt>(50.0),
             reactor_temperature: 25.0,
             boost_life_support: 0,
             boost_battery: 0,
@@ -119,16 +120,17 @@ impl GameState {
 
         // d/dt(Δf)
         // Ensure pnom is not zero to avoid division by zero if it can be.
-        // The Power/Power division handles internal zero check for rhs.0
-        let rocof = if pnom.0 == 0.0 && delta_p.0 != 0.0 {
+        // The Power/Power division handles internal zero check for rhs.value
+        let rocof = if pnom.value == 0.0 && delta_p.value != 0.0 {
              // If there's an imbalance but no nominal power, frequency change is undefined or infinite.
              // This case should be handled based on game design (e.g., rapid collapse).
              // For now, let's assume a large change if delta_p is non-zero.
-            if delta_p.0 > 0.0 { f32::INFINITY } else { f32::NEG_INFINITY }
-        } else if pnom.0 == 0.0 && delta_p.0 == 0.0 {
+            if delta_p.value > 0.0 { f32::INFINITY } else { f32::NEG_INFINITY }
+        } else if pnom.value == 0.0 && delta_p.value == 0.0 {
             0.0 // No imbalance, no nominal power, no change.
         } else {
-            delta_p / (2.0 * h * (pnom / f0))
+            // Ensure that the division results in a f32 by accessing .value
+            (delta_p / (2.0 * h * (pnom / f0))).value
         };
 
 
@@ -170,9 +172,9 @@ impl GameState {
                 .tick(power_imbalance, self.mission_time_seconds, game_vars);
         // If battery consumes power (charges), it increases demand.
         // If battery supplies power (discharges), it increases supply.
-        if power_consumed_by_battery.0 > 0.0 {
+        if power_consumed_by_battery.value > 0.0 {
             self.total_grid_demand += power_consumed_by_battery;
-        } else if power_consumed_by_battery.0 < 0.0 {
+        } else if power_consumed_by_battery.value < 0.0 {
             self.total_grid_supply += -power_consumed_by_battery;
         }
         self.frequency_hz = self.tick_frequency_hz(game_vars);
