@@ -3,6 +3,8 @@ use crate::tick_context::TickContext;
 use uom::si::energy::{kilowatt_hour, watt_hour};
 use uom::si::f32::{Energy, Power};
 use uom::si::power::{kilowatt, watt};
+use uom::si::quantities::Ratio;
+use uom::si::ratio::percent;
 use uom::ConstZero;
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -55,7 +57,7 @@ impl Battery {
         match self.mode {
             BatteryMode::Charge => {
                 let effective_capacity =
-                    context.game_vars.battery_capacity * (1.0 - (damage_percentage / 100.0));
+                    context.game_vars.battery_capacity * (1.0 - (damage_percentage.get::<percent>() / 100.0));
                 let max_charge_as_power_quantity: Power = effective_capacity / context.tick_delta;
 
                 let max_charge_power_watts =
@@ -81,7 +83,7 @@ impl Battery {
                 let current_energy_available =
                     context.game_vars.battery_capacity * (self.charge_percentage / 100.0);
                 let effective_current_energy =
-                    current_energy_available * (1.0 - (damage_percentage / 100.0));
+                    current_energy_available * (1.0 - (damage_percentage.get::<percent>() / 100.0));
                 let max_discharge_as_power_quantity: Power =
                     effective_current_energy / context.tick_delta;
 
@@ -104,7 +106,7 @@ impl Battery {
                     power_consumed = -actual_discharge_power;
                 }
             }
-            BatteryMode::Auto if damage_percentage == 0.0 => {
+            BatteryMode::Auto if damage_percentage == Ratio::ZERO => {
                 if power_imbalance < Power::ZERO {
                     let charge_power = -power_imbalance;
                     let energy_added: Energy = charge_power * context.tick_delta;

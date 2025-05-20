@@ -1,11 +1,13 @@
 use crate::game_variables::GameVariables;
 use crate::tick_context::TickContext;
+use uom::ConstZero;
+use uom::si::f32::Ratio;
 use uom::si::f32::Time;
-use uom::si::time::second;
+use uom::si::ratio::percent;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GeneratorState {
-    Online { damage_percentage: f32 },
+    Online { damage_percentage: Ratio },
     Offline,
     Repairing { event_end: Time },
 }
@@ -18,56 +20,50 @@ impl Default for GeneratorState {
 
 impl GeneratorState {
     pub fn new() -> Self {
-        GeneratorState::Online {
-            damage_percentage: 0.0,
+        Self::Online {
+            damage_percentage: Ratio::ZERO,
         }
     }
-    /// Transitions the system to a Repairing state, calculating the finish time.
-    /// Call this when a repair action is initiated.
     pub fn repair(self, current_mission_time: Time, game_vars: &GameVariables) -> Self {
-        let initial_damage = match self {
-            GeneratorState::Online { damage_percentage } => damage_percentage,
-            GeneratorState::Offline => 100.0, // Assume 100% damage if Offline
-            GeneratorState::Repairing { .. } => return self, // Already repairing
-        };
-
-        if initial_damage <= 0.0 {
-            return GeneratorState::Online {
-                damage_percentage: 0.0,
-            }; // No damage to repair
-        }
-
-        let repair_duration_seconds = initial_damage * game_vars.repair_time_per_damage_unit.get::<second>();
-        let event_end = current_mission_time + Time::new::<second>(repair_duration_seconds);
-
-        GeneratorState::Repairing { event_end }
-    }
-    /// Applies damage to the system, increasing its damage percentage.
-    /// If damage exceeds 100%, the system becomes Offline.
-    pub fn damage(&mut self, amount: f32) {
         match self {
-            GeneratorState::Online { damage_percentage } => {
-                *damage_percentage = (*damage_percentage + amount).min(100.0);
-                if *damage_percentage >= 100.0 {
-                    *self = GeneratorState::Offline;
+            Self::Repairing { .. } => self,
+            Self::Online { damage_percentage } if damage_percentage <= Ratio::ZERO => {
+                Self::Online { damage_percentage: Ratio::ZERO }
+            }
+            Self::Online { damage_percentage } => {
+                let repair_duration =
+                    damage_percentage.get::<percent>() * game_vars.repair_time_per_damage_unit;
+                Self::Repairing {
+                    event_end: current_mission_time + repair_duration,
                 }
             }
-            GeneratorState::Repairing { .. } => { /* Ignore damage while repairing */ }
-            GeneratorState::Offline => { /* Already offline */ }
+            Self::Offline => {
+                let initial_damage = Ratio::new::<percent>(100.0);
+                let repair_duration =
+                    initial_damage.get::<percent>() * game_vars.repair_time_per_damage_unit;
+                Self::Repairing {
+                    event_end: current_mission_time + repair_duration,
+                }
+            }
+        }
+    }
+    pub fn damage(&mut self, amount: Ratio) {
+        match self {
+            Self::Online { damage_percentage } => {
+                *damage_percentage += amount;
+                if *damage_percentage >= Ratio::new::<percent>(100.0) {
+                    *self = Self::Offline;
+                }
+            }
+            Self::Offline | Self::Repairing { .. } => {}
         }
     }
 
-    /// Checks if repair is complete and updates state accordingly.
-    /// Call this on each game tick for systems that can be repaired.
     pub fn tick(&mut self, context: &TickContext) {
-        if let GeneratorState::Repairing {
-            event_end: repair_finish_time,
-            ..
-        } = self
-        {
-            if context.mission_time >= *repair_finish_time {
-                *self = GeneratorState::Online {
-                    damage_percentage: 0.0,
+        if let Self::Repairing { event_end } = self {
+            if context.mission_time >= *event_end {
+                *self = Self::Online {
+                    damage_percentage: Ratio::ZERO,
                 };
             }
         }
