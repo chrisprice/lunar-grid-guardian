@@ -37,7 +37,7 @@ impl Battery {
     /// # Arguments
     /// * `power_imbalance` - The current power imbalance on the grid (demand - supply).
     ///                          Positive means demand > supply, negative means supply > demand.
-    /// * `mission_time_seconds` - The total mission time in seconds, for internal state ticking.
+    /// * `mission_time` - The total mission time, for internal state ticking.
     /// * `game_vars` - Game balancing variables, including battery capacity.
     ///
     /// # Returns
@@ -46,12 +46,12 @@ impl Battery {
     pub fn tick(
         &mut self,
         power_imbalance: Power,
-        mission_time_seconds: u32,
+        mission_time: Time,
         game_vars: &GameVariables,
     ) -> Power {
-        self.generator_state.tick(mission_time_seconds);
+        self.generator_state.tick(mission_time);
 
-        let dt_hours_f32 = 1.0 / 3600.0;
+        let dt_hours_f32 = 1.0 / 3600.0; // Assuming 1 tick = 1 second
         let dt_as_time_quantity = Time::new::<hour>(dt_hours_f32);
 
         let GeneratorState::Online { damage_percentage } = self.generator_state else {

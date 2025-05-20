@@ -1,7 +1,7 @@
 use crate::game_variables::GameVariables;
 use crate::generator::GeneratorState;
 use crate::lunar_phase::LunarPhase;
-use uom::si::f32::Power;
+use uom::si::f32::{Power, Time};
 use uom::si::power::watt;
 
 pub struct SolarState {
@@ -21,11 +21,11 @@ impl SolarState {
     /// Returns the amount of power generated.
     pub fn tick(
         &mut self,
-        mission_time_seconds: u32,
+        mission_time: Time,
         lunar_phase: &LunarPhase,
         game_vars: &GameVariables,
     ) -> Power {
-        self.generator_state.tick(mission_time_seconds);
+        self.generator_state.tick(mission_time);
 
         let GeneratorState::Online { damage_percentage } = self.generator_state else {
             return Power::new::<watt>(0.0);

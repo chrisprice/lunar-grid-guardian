@@ -4,15 +4,16 @@ use crate::game_variables::GameVariables;
 use crate::generator::GeneratorState;
 use crate::lunar_phase::{LUNAR_DAY_SECONDS, LunarPhase};
 use crate::operations::OperationsState;
-use uom::si::f32::Power;
+use uom::si::f32::{Power, Time};
 use uom::si::power::watt;
+use uom::si::time::second;
 use crate::solar::SolarState;
 
 pub struct GameState {
-    /// Real time in seconds since the start of the mission.
-    pub mission_time_seconds: u32,
-    /// Last tick time in seconds since the start of the mission.
-    pub last_tick_time_seconds: u32,
+    /// Real time since the start of the mission.
+    pub mission_time: Time,
+    /// Last tick time since the start of the mission.
+    pub last_tick_time: Time,
 
     // Grid metrics
     pub total_grid_supply: Power,
@@ -56,8 +57,8 @@ pub struct GameState {
 impl GameState {
     pub fn new() -> Self {
         GameState {
-            mission_time_seconds: 0,
-            last_tick_time_seconds: 0,
+            mission_time: Time::new::<second>(0.0),
+            last_tick_time: Time::new::<second>(0.0),
             total_grid_supply: Power::new::<watt>(0.0),
             total_grid_demand: Power::new::<watt>(0.0),
             frequency_hz: 50.0,
@@ -84,7 +85,7 @@ impl GameState {
 
     /// Returns the current lunar phase and time in cycle, derived from mission time and scaling factor.
     pub fn lunar_phase_and_time(&self, game_vars: &GameVariables) -> LunarPhase {
-        let lunar_seconds = self.mission_time_seconds as f32 / game_vars.mission_time_scale_factor;
+        let lunar_seconds = self.mission_time.get::<second>() / game_vars.mission_time_scale_factor;
         let time_in_cycle = lunar_seconds % LUNAR_DAY_SECONDS;
         if time_in_cycle < (LUNAR_DAY_SECONDS / 2.0) {
             LunarPhase::Day {
@@ -105,40 +106,30 @@ impl GameState {
 
     /// Derives the next frequency_hz value based on the swing equation and current state.
     pub fn tick_frequency_hz(&self, game_vars: &GameVariables) -> f32 {
-        // Based on README.md:
-        // d/dt(Δf) = ΔP / (2H * Pnom / f0)
-        // Δf = frequency deviation from 50Hz
-        // ΔP = total_grid_supply - total_grid_demand
-        // H = system_inertia_h
-        // Pnom = system_nominal_power_pnom
-        // f0 = 50.0
-
-        let delta_p = self.total_grid_supply - self.total_grid_demand;
+        let power_imbalance = self.total_grid_demand - self.total_grid_supply;
+        let delta_p = power_imbalance;
         let h = game_vars.system_inertia_h;
         let pnom = game_vars.system_nominal_power_pnom;
-        let f0 = 50.0;
+        let f0 = 50.0; // Nominal frequency in Hz
 
-        // d/dt(Δf)
-        // Ensure pnom is not zero to avoid division by zero if it can be.
-        // The Power/Power division handles internal zero check for rhs.value
-        let rocof = if pnom.value == 0.0 && delta_p.value != 0.0 {
-             // If there's an imbalance but no nominal power, frequency change is undefined or infinite.
-             // This case should be handled based on game design (e.g., rapid collapse).
-             // For now, let's assume a large change if delta_p is non-zero.
-            if delta_p.value > 0.0 { f32::INFINITY } else { f32::NEG_INFINITY }
-        } else if pnom.value == 0.0 && delta_p.value == 0.0 {
-            0.0 // No imbalance, no nominal power, no change.
+        // Rate of Change of Frequency (RoCoF)
+        let rocof = if pnom.value == 0.0 || h.value == 0.0 {
+            0.0 // Avoid division by zero if system nominal power or inertia is zero
         } else {
-            // Ensure that the division results in a f32 by accessing .value
             (delta_p / (2.0 * h * (pnom / f0))).value
         };
 
-
-        // New frequency = current + (rate of change * tick)
-        self.frequency_hz + rocof * (self.mission_time_seconds - self.last_tick_time_seconds) as f32
+        // New frequency = current + (rate of change * tick duration)
+        // Ensure last_tick_time is not greater than mission_time to prevent negative duration
+        let tick_duration = if self.mission_time > self.last_tick_time {
+            (self.mission_time - self.last_tick_time).get::<second>()
+        } else {
+            0.0 // Or handle as an error/log, but for tick logic, 0 duration is safer
+        };
+        self.frequency_hz + rocof * tick_duration
     }
     pub fn tick_operations(&mut self) {
-        let docking_completed = self.supply_drop_flow_state.tick(self.mission_time_seconds);
+        let docking_completed = self.supply_drop_flow_state.tick(self.mission_time);
 
         if docking_completed {
             todo!("Award player with a random boost");
@@ -146,21 +137,21 @@ impl GameState {
     }
 
     pub fn tick(&mut self, game_vars: &GameVariables) {
-        self.mission_time_seconds += 1;
+        self.mission_time += Time::new::<second>(1.0);
 
         // Event state ticks
-        self.micrometeorite_event.tick(self.mission_time_seconds);
-        self.lunar_quake_event.tick(self.mission_time_seconds);
-        self.solar_flare_event.tick(self.mission_time_seconds);
+        self.micrometeorite_event.tick(self.mission_time);
+        self.lunar_quake_event.tick(self.mission_time);
+        self.solar_flare_event.tick(self.mission_time);
 
         // Solar system tick (handles repair) and get power generation
         let lunar_phase = self.lunar_phase_and_time(game_vars);
         let solar_power =
             self.solar
-                .tick(self.mission_time_seconds, &lunar_phase, game_vars);
+                .tick(self.mission_time, &lunar_phase, game_vars);
 
         // Reactor system tick (handles repair)
-        self.reactor_state.tick(self.mission_time_seconds);
+        self.reactor_state.tick(self.mission_time);
         // TODO: Get reactor power output, e.g.,
         // let reactor_power_output = calculate_reactor_power(&self.reactor_state, self.reactor_power, game_vars);
 
@@ -169,18 +160,18 @@ impl GameState {
         let power_imbalance = self.total_grid_demand - self.total_grid_supply;
         let power_consumed_by_battery =
             self.battery
-                .tick(power_imbalance, self.mission_time_seconds, game_vars);
+                .tick(power_imbalance, self.mission_time, game_vars);
         // If battery consumes power (charges), it increases demand.
         // If battery supplies power (discharges), it increases supply.
         if power_consumed_by_battery.value > 0.0 {
             self.total_grid_demand += power_consumed_by_battery;
         } else if power_consumed_by_battery.value < 0.0 {
-            self.total_grid_supply += -power_consumed_by_battery;
+            self.total_grid_supply += -power_consumed_by_battery; // Add the absolute value
         }
         self.frequency_hz = self.tick_frequency_hz(game_vars);
 
         self.tick_operations();
 
-        self.last_tick_time_seconds = self.mission_time_seconds;
+        self.last_tick_time = self.mission_time;
     }
 }

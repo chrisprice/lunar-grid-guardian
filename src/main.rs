@@ -15,9 +15,9 @@ mod battery;
 mod event_state;
 mod game_state;
 mod game_variables;
+mod generator;
 mod lunar_phase;
 mod operations;
-mod generator;
 mod solar;
 
 use game_state::GameState;
@@ -90,8 +90,8 @@ fn ui(f: &mut Frame, app: &App) {
         .constraints([Constraint::Percentage(100)].as_ref())
         .split(f.size());
 
-    let mission_time = app.game_state.mission_time_seconds;
-    let timer_text = format!("Mission Time: {}s", mission_time);
+    let mission_time_seconds = app.game_state.mission_time.get::<uom::si::time::second>();
+    let timer_text = format!("Mission Time: {:.0}s", mission_time_seconds);
     let timer_paragraph = Paragraph::new(timer_text)
         .block(Block::default().title("Mission Timer").borders(Borders::ALL));
     f.render_widget(timer_paragraph, chunks[0]);

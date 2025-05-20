@@ -1,15 +1,15 @@
 use crate::game_variables::GameVariables;
-use uom::si::time::second;
+use uom::si::f32::Time;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationsState {
     // Dormant: waiting for next supply drop to be scheduled.
     Dormant,
     // Supply drop is scheduled to arrive (become AwaitingAuthorization) at event_start.
-    Scheduled { event_start: u32 },
+    Scheduled { event_start: Time },
     AwaitingAuthorization, // Supply drop has arrived and is ready for player to authorize docking
     // Docking is in progress, will complete at event_end (mission time).
-    DockingInProgress { event_end: u32 },
+    DockingInProgress { event_end: Time },
 }
 
 impl OperationsState {
@@ -19,7 +19,7 @@ impl OperationsState {
 
     /// Ticks the state.
     /// Returns true if docking is completed.
-    pub fn tick(&mut self, current_mission_time: u32) -> bool{
+    pub fn tick(&mut self, current_mission_time: Time) -> bool{
         let mut docking_completed = false;
         *self = match self {
             OperationsState::Scheduled { event_start } if current_mission_time >= *event_start => {
@@ -40,10 +40,10 @@ impl OperationsState {
     /// Attempts to authorize docking.
     /// GameState should ensure operations are online before calling this.
     /// Returns true if authorization was successful and docking started.
-    pub fn authorize_docking(&mut self, current_mission_time: u32, game_vars: &GameVariables) -> bool {
+    pub fn authorize_docking(&mut self, current_mission_time: Time, game_vars: &GameVariables) -> bool {
         if matches!(self, OperationsState::AwaitingAuthorization) {
             *self = OperationsState::DockingInProgress {
-                event_end: current_mission_time + game_vars.supply_drop_docking_duration.get::<second>() as u32,
+                event_end: current_mission_time + game_vars.supply_drop_docking_duration,
             };
             true
         } else {

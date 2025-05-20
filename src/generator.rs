@@ -1,11 +1,12 @@
 use crate::game_variables::GameVariables;
+use uom::si::f32::Time;
 use uom::si::time::second;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GeneratorState {
     Online { damage_percentage: f32 },
     Offline,
-    Repairing { event_end: u32 },
+    Repairing { event_end: Time },
 }
 
 impl GeneratorState {
@@ -16,7 +17,7 @@ impl GeneratorState {
     }
     /// Transitions the system to a Repairing state, calculating the finish time.
     /// Call this when a repair action is initiated.
-    pub fn repair(self, current_mission_time: u32, game_vars: &GameVariables) -> Self {
+    pub fn repair(self, current_mission_time: Time, game_vars: &GameVariables) -> Self {
         let initial_damage = match self {
             GeneratorState::Online { damage_percentage } => damage_percentage,
             GeneratorState::Offline => 100.0, // Assume 100% damage if Offline
@@ -30,7 +31,7 @@ impl GeneratorState {
         }
 
         let repair_duration_seconds = initial_damage * game_vars.repair_time_per_damage_unit.get::<second>();
-        let event_end = current_mission_time + repair_duration_seconds as u32;
+        let event_end = current_mission_time + Time::new::<second>(repair_duration_seconds);
 
         GeneratorState::Repairing { event_end }
     }
@@ -51,7 +52,7 @@ impl GeneratorState {
 
     /// Checks if repair is complete and updates state accordingly.
     /// Call this on each game tick for systems that can be repaired.
-    pub fn tick(&mut self, current_mission_time: u32) {
+    pub fn tick(&mut self, current_mission_time: Time) {
         if let GeneratorState::Repairing {
             event_end: repair_finish_time,
             ..
