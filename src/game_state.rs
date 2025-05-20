@@ -22,8 +22,8 @@ pub struct GameState {
     pub total_grid_demand: Power,
     pub frequency_hz: Frequency,
 
-    // Health status (0-100%)
-    pub colony_health: f32, // 0-100%
+    // Damage status (0-100%, where 0% is no damage)
+    pub colony_damage: f32, // 0-100%
 
     pub comms_online: bool,
     pub operations_online: bool,
@@ -64,7 +64,7 @@ impl GameState {
             total_grid_supply: Power::new::<watt>(0.0),
             total_grid_demand: Power::new::<watt>(0.0),
             frequency_hz: game_vars.nominal_frequency,
-            colony_health: 0.0,
+            colony_damage: 0.0,
             solar: SolarState::new(),
             battery: Battery::new(),
             reactor_state: GeneratorState::new(),
@@ -100,10 +100,9 @@ impl GameState {
         }
     }
 
-    /// Returns true if the game is over, based on colony health or frequency deviation.
+    /// Returns true if the game is over, based on colony damage or frequency deviation.
     pub fn is_game_over(&self, game_vars: &GameVariables) -> bool {
-        // Game Over if colony health reaches 0% or frequency deviates by more than ±0.5Hz from 50Hz
-        self.colony_health <= 0.0
+        self.colony_damage >= 100.0
             || (self.tick_frequency_hz(game_vars) - game_vars.nominal_frequency)
                 .abs()
                 .get::<hertz>()

@@ -14,7 +14,7 @@ The game's challenge and rhythm are driven by the lunar day/night cycle, directl
 
 ### **1.2. General Note on Data Representation**
 
-All system level values (e.g., damage levels, charge levels, coolant levels, colony health) should be stored internally as a percentage (ranging from 0% to 100%). This allows for precise calculations and consistent representation. UI displays can still use different visual interpretations (e.g., segmented bars, gauges) but the underlying value will be 0-100%.
+All system level values (e.g., damage levels, charge levels, coolant levels, colony damage) should be stored internally as a percentage (ranging from 0% to 100%). This allows for precise calculations and consistent representation. UI displays can still use different visual interpretations (e.g., segmented bars, gauges) but the underlying value will be 0-100%.
 
 ### **1.3. Grid Frequency Dynamics and Power Imbalance**
 
@@ -58,10 +58,10 @@ This panel serves as the main display for the player, showing key metrics relate
   * Displayed as a health bar or a gauge showing deviation from the target frequency.  
   * **Game Over Condition:** If the frequency deviates by more than **±0.5Hz** from the target, it results in a game over.  
   * *Visual Style:* A central, prominent gauge that clearly shows the acceptable range and the current frequency. It could pulse or change color as it nears critical limits.  
-* **Colony Health (Primary Health Metric 2):**  
+* **Colony Damage (Primary Damage Metric 2):**  
   * Represents the overall well-being or operational status of the colony.  
-  * Displayed as a percentage (0-100%).  
-  * **Game Over Condition:** If Colony Health reaches 0%, it results in a game over.  
+  * Displayed as a percentage (0-100%, where 0% is no damage and 100% is critical).  
+  * **Game Over Condition:** If Colony Damage reaches 100%, it results in a game over.  
 * **Mission Timer:**  
   * Displays the elapsed time the player has successfully managed the grid, represented as "scaled in-game time."  
   * Time Format: Recorded and displayed as Lunar Days, Hours, Minutes, and Seconds.  
@@ -236,13 +236,13 @@ This panel provides the player with controls to manage the power consumption of 
 
 ##### **2.2.2.1. Life Support Sub-Panel**
 
-This sub-panel is critical for maintaining colony viability and directly impacts the "Colony Health" metric.
+This sub-panel is critical for maintaining colony viability and directly impacts the "Colony Damage" metric.
 
 **Functionality:**
 
-* **Colony Health Impact:**  
-  * When Life Support is operational (i.e., not in Emergency Restrictions mode), it slowly rebuilds/maintains the "Colony Health" score (0-100%) (rate defined by ColonyStatusRebuildRate in Table 1).  
-  * Enabling "Emergency Restrictions" drains the "Colony Health" score at an accelerated rate (defined by ColonyStatusDrainRateEmergency in Table 1).  
+* **Colony Damage Impact:**  
+  * When Life Support is operational (i.e., not in Emergency Restrictions mode), it slowly decreases the "Colony Damage" score (0-100%) (rate defined by ColonyDamageRepairRate in Table 1).  
+  * Enabling "Emergency Restrictions" increases the "Colony Damage" score at an accelerated rate (defined by ColonyDamageIncreaseRateEmergency in Table 1).  
 * **Power Demand:**  
   * Life Support has a base power demand (defined by LifeSupportBasePowerDemand in Table 1).  
   * Over time, the base power demand for Life Support will gradually increase (rate defined by LifeSupportPowerDemandIncrease in Table 1), adding to the game's difficulty scaling.  
@@ -257,7 +257,7 @@ This sub-panel is critical for maintaining colony viability and directly impacts
 
 * **Life Support Power Level:** Shows the current power being consumed by the Life Support system (in Power units).  
   * *Visual Style:* Could be an analog-style gauge.  
-* **Colony Health Level (Local Reference):** Displays the current "Colony Health" score (0-100%), mirroring the display on the GO Panel for immediate reference when making decisions on this sub-panel.  
+* **Colony Damage Level (Local Reference):** Displays the current "Colony Damage" score (0-100%), mirroring the display on the GO Panel for immediate reference when making decisions on this sub-panel.  
   * *Visual Style:* For example, a numerical display or segmented bar matching the GO Panel's display.  
 * **Emergency Restrictions Status Indicator:** A light indicating if emergency restrictions are active.  
   * *Visual Style:* For example, a prominent warning light (e.g., flashing red or amber) when active.
@@ -308,7 +308,7 @@ This sub-panel allows the player to manage non-critical colony operations that c
   * The timer for the next supply drop is paused if a current supply drop is pending docking or is in the process of docking (i.e., from "Authorize Docking" press until docking sequence completes \- duration SupplyDropDockingDuration in Table 1).  
   * Docking can only be authorized if the Operations sub-panel is online.  
 * **Boost Items (One is randomly awarded per successful docking):**  
-  * **Life Support Boost:** Increases "Colony Health" (0-100%) by a set amount (defined by BoostLifeSupportAmount in Table 1).  
+  * **Life Support Boost:** Increases "Colony Damage" (0-100%) by a set amount (defined by BoostLifeSupportAmount in Table 1). This should decrease the damage value.  
   * **Battery Boost:** Increases charge level (0-100%) of all batteries by a set amount (defined by BoostBatteryAmount in Table 1). This boost cannot increase the charge level of batteries beyond their normal maximum capacity (100%).  
   * **Coolant Boost:** Increases the reactor's coolant level (0-100%) by a set amount (defined by BoostCoolantAmount in Table 1). This boost cannot increase the reactor's coolant level beyond its normal maximum capacity (100%).  
   * **Repair Boost:** Reduces all current system damage levels by a set percentage amount for all damageable systems (i.e., Solar, Batteries, and Reactor) (defined by BoostRepairAmount in Table 1).  
@@ -353,8 +353,8 @@ The following table lists parameters that require specific values to be assigned
 | 2.2.1.3 | Reactor Coolant Refill Rate | ReactorCoolantRefillRate | Percentage points per second | Rate at which coolant refills towards 100%. |
 | 2.2.1.3 | Reactor Coolant Effectiveness Reduction Rate | CoolantEffectivenessReductionRate | % effectiveness loss per % reactor damage | How much cooling power is lost as reactor damage increases. |
 | 2.2.1.3 | Reactor Repair Duration | ReactorRepairTimePerDamageUnit | Seconds per % damage | e.g., X seconds to repair 1% damage |
-| 2.2.2.1 | Life Support \- Colony Health Rebuild Rate | ColonyStatusRebuildRate | Percentage points per second (for 0-100% scale) | Rate at which Colony Health (0-100%) increases when LS is normal. |
-| 2.2.2.1 | Life Support \- Colony Health Drain Rate (Emergency) | ColonyStatusDrainRateEmergency | Percentage points per second (for 0-100% scale) | Rate at which Colony Health (0-100%) decreases during LS Emergency Restrictions. |
+| 2.2.2.1 | Life Support \- Colony Damage Repair Rate | ColonyDamageRepairRate | Percentage points per second (for 0-100% scale) | Rate at which Colony Damage (0-100%) decreases when LS is normal. |
+| 2.2.2.1 | Life Support \- Colony Damage Increase Rate (Emergency) | ColonyDamageIncreaseRateEmergency | Percentage points per second (for 0-100% scale) | Rate at which Colony Damage (0-100%) increases during LS Emergency Restrictions. |
 | 2.2.2.1 | Life Support \- Base Power Demand | LifeSupportBasePowerDemand | Power units | Initial power demand. |
 | 2.2.2.1 | Life Support \- Power Demand Increase Rate | LifeSupportPowerDemandIncrease | Power units per in-game day | How much power demand increases each game day. |
 | 2.2.2.2 | Comms \- Power Demand | CommsPowerDemand | Power units | Constant power load when Comms are online. |
@@ -368,7 +368,7 @@ The following table lists parameters that require specific values to be assigned
 | 2.2.2.3 | Operations \- Docking Power Spike Duration | OperationsDockingSpikeDuration | Seconds | Duration of the increased power draw for docking. |
 | 2.2.2.3 | Supply Drop \- Timer Interval | SupplyDropInterval | Seconds | Time between availability of new Boost Item supply drops. |
 | 2.2.2.3 | Supply Drop \- Docking Sequence Duration | SupplyDropDockingDuration | Seconds | Time taken for the docking sequence to complete after authorization. |
-| 2.2.2.3 | Boost Item \- Life Support Effect | BoostLifeSupportAmount | Flat amount (percentage points for 0-100% scale) | Percentage points added to Colony Health (0-100%). |
+| 2.2.2.3 | Boost Item \- Life Support Effect | BoostLifeSupportAmount | Flat amount (percentage points for 0-100% scale) | Percentage points to decrease Colony Damage (0-100%). |
 | 2.2.2.3 | Boost Item \- Battery Effect | BoostBatteryAmount | Flat amount (percentage points) | Percentage points added to battery charge (0-100%). |
 | 2.2.2.3 | Boost Item \- Coolant Effect | BoostCoolantAmount | Flat amount (percentage points) | Percentage points added to reactor coolant (0-100%). |
 | 2.2.2.3 | Boost Item \- Repair Effect | BoostRepairAmount | Flat amount (damage % points) | Reduces system damage percentage by this many points (e.g., 50% to 40%). |

@@ -29,10 +29,10 @@ pub struct GameVariables {
     pub reactor_coolant_refill_rate: f32,
     /// Reactor Coolant Effectiveness Reduction Rate (% effectiveness loss per % reactor damage)
     pub coolant_effectiveness_reduction_rate: f32,
-    /// Life Support - Colony Health Rebuild Rate (percentage points per second)
-    pub colony_status_rebuild_rate: f32,
-    /// Life Support - Colony Health Drain Rate (Emergency) (percentage points per second)
-    pub colony_status_drain_rate_emergency: f32,
+    /// Life Support - Colony Damage Repair Rate (percentage points per second)
+    pub colony_damage_repair_rate: f32,
+    /// Life Support - Colony Damage Increase Rate (Emergency) (percentage points per second)
+    pub colony_damage_rate_emergency: f32,
     /// Life Support - Base Power Demand (Power units)
     pub life_support_base_power_demand: Power,
     /// Life Support - Power Demand Increase Rate (Power units per in-game day)
@@ -80,8 +80,8 @@ impl Default for GameVariables {
             reactor_max_coolant_percentage: 100.0,
             reactor_coolant_refill_rate: 1.0,
             coolant_effectiveness_reduction_rate: 0.5,
-            colony_status_rebuild_rate: 0.1,
-            colony_status_drain_rate_emergency: 0.5,
+            colony_damage_repair_rate: 0.1,
+            colony_damage_rate_emergency: 0.5,
             life_support_base_power_demand: Power::new::<watt>(100.0),
             life_support_power_demand_increase: Power::new::<watt>(5.0),
             comms_power_demand: Power::new::<watt>(20.0),

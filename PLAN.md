@@ -20,16 +20,16 @@ This plan prioritizes getting a playable slice of the game up and running as qui
         *   Set `TotalGridSupply` to be equal to `ReactorPowerOutput`.
     *   **UI (GO Panel - Minimal):**
         *   Display `TotalGridSupply` (simple text).
-        *   Display `ColonyHealth` (simple text or a basic bar).
+        *   Display `ColonyDamage` (simple text or a basic bar).
 5.  **Simplest Demand System - Life Support (Basic Drain):**
     *   **Logic:**
         *   Implement a `LifeSupportPowerDemand` variable (type `Power`, fixed value).
         *   Set `TotalGridDemand` to this value.
-        *   If `TotalGridSupply < TotalGridDemand`, start slowly decreasing `ColonyHealth`.
-        *   If `ColonyHealth` reaches 0, print "Game Over" and stop the loop (basic game over).
+        *   If `TotalGridSupply < TotalGridDemand`, start slowly increasing `ColonyDamage`.
+        *   If `ColonyDamage` reaches 100, print "Game Over" and stop the loop (basic game over).
     *   **UI (GO Panel - Minimal):**
         *   Display `TotalGridDemand` (simple text).
-        *   Update `ColonyHealth` display.
+        *   Update `ColonyDamage` display.
 6.  **Basic Input - Quit:**
     *   Allow the player to quit the game (e.g., pressing 'q').
 
@@ -41,7 +41,7 @@ This plan prioritizes getting a playable slice of the game up and running as qui
     *   **Logic:**
         *   Calculate `PowerImbalance = TotalGridSupply - TotalGridDemand`.
         *   Implement a simplified `FrequencyDeviation`. If `PowerImbalance` is not zero, make `FrequencyDeviation` change (e.g., `FrequencyDeviation += PowerImbalance * 0.01`).
-        *   If `FrequencyDeviation` goes beyond a simple threshold (e.g., +/- 5.0 from a target of 50Hz), rapidly decrease `ColonyHealth`.
+        *   If `FrequencyDeviation` goes beyond a simple threshold (e.g., +/- 5.0 from a target of 50Hz), rapidly increase `ColonyDamage`.
     *   **UI (GO Panel):**
         *   Display `Frequency Imbalance` (e.g., as a number, target 50Hz).
 8.  **Reactor Control (Basic):**
@@ -54,12 +54,12 @@ This plan prioritizes getting a playable slice of the game up and running as qui
 9.  **Life Support Control (Emergency Restrictions):**
     *   **Logic:**
         *   Implement `Emergency Restrictions Toggle` (e.g., press 'e').
-        *   If active, significantly reduce `LifeSupportPowerDemand` but also apply `ColonyStatusDrainRateEmergency` to `ColonyHealth`.
-        *   If inactive, `LifeSupportPowerDemand` is normal, and `ColonyHealth` might slowly rebuild if supply is sufficient (`ColonyStatusRebuildRate`).
+        *   If active, significantly reduce `LifeSupportPowerDemand` but also apply `ColonyDamageIncreaseRateEmergency` to `ColonyDamage`.
+        *   If inactive, `LifeSupportPowerDemand` is normal, and `ColonyDamage` might slowly decrease if supply is sufficient (`ColonyDamageRepairRate`).
     *   **UI (Life Support Sub-Panel - Minimal):**
         *   Display `Life Support Power Level`.
         *   Display `Emergency Restrictions Status Indicator` (e.g., "ON" / "OFF").
-        *   Display `Colony Health Level (Local Reference)`.
+        *   Display `Colony Damage Level (Local Reference)`.
 
 *(Now, the player can interact with the reactor to balance supply and make a choice with Life Support that affects demand and health. The frequency mechanic adds another layer of challenge.)*
 
@@ -134,7 +134,7 @@ This plan prioritizes getting a playable slice of the game up and running as qui
 18. **Boost Items (One type first - e.g., Repair Boost):**
     *   **Logic:**
         *   When Operations successfully "docks", award a "Repair Boost" item.
-        *   Implement "Use Repair Boost" button. When used, it sets all damaged systems (e.g., Solar if damaged) back to "Green" / full health.
+        *   Implement "Use Repair Boost" button. When used, it sets all damaged systems (e.g., Solar if damaged) back to "Green" / 0% damage.
     *   **UI (Operations Sub-Panel):**
         *   Display `Item Counts` (for Repair Boost).
         *   Add `Authorize Docking Button` and `Use Item Button` (for Repair Boost).
