@@ -1,5 +1,7 @@
 use crate::tick_context::TickContext;
 use uom::si::f32::Time;
+use uom::si::f32::Power;
+use uom::ConstZero;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum OperationsState {
@@ -13,10 +15,15 @@ pub enum OperationsState {
     DockingInProgress { event_end: Time },
 }
 
+pub struct TickResult {
+    pub power_consumed: Power,
+    pub docking_completed: bool,
+}
+
 impl OperationsState {
     /// Ticks the state.
     /// Returns true if docking is completed.
-    pub fn tick(&mut self, context: &TickContext) -> bool{
+    pub fn tick(&mut self, context: &TickContext) -> TickResult {
         let mut docking_completed = false;
         *self = match self {
             OperationsState::Scheduled { event_start } if context.mission_time >= *event_start => {
@@ -31,7 +38,10 @@ impl OperationsState {
             | OperationsState::DockingInProgress { .. }
             | OperationsState::Dormant => *self,
         };
-        docking_completed
+        TickResult {
+            power_consumed: Power::ZERO,
+            docking_completed,
+        }
     }
 
     /// Attempts to authorize docking.

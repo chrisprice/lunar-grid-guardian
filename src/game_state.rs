@@ -47,8 +47,8 @@ pub struct GameState<'a> {
     pub lunar_quake_event: EventState,
     pub solar_flare_event: EventState,
 
-    // Supply drop and docking status
-    pub supply_drop_flow_state: OperationsState,
+    // Operations state
+    pub operations: OperationsState,
 }
 
 impl<'a> GameState<'a> {
@@ -74,7 +74,7 @@ impl<'a> GameState<'a> {
             micrometeorite_event: EventState::Dormant,
             lunar_quake_event: EventState::Dormant,
             solar_flare_event: EventState::Dormant,
-            supply_drop_flow_state: OperationsState::default(),
+            operations: OperationsState::default(),
         }
     }
 
@@ -112,13 +112,6 @@ impl<'a> GameState<'a> {
         };
         self.frequency_hz + rocof * tick_duration_seconds
     }
-    pub fn tick_operations(&mut self, context: &TickContext) {
-        let docking_completed = self.supply_drop_flow_state.tick(context);
-
-        if docking_completed {
-            todo!("Award player with a random boost");
-        }
-    }
 
     pub fn tick(&mut self) {
         self.mission_time += Time::new::<second>(1.0);
@@ -134,11 +127,19 @@ impl<'a> GameState<'a> {
         self.lunar_quake_event.tick(context);
         self.solar_flare_event.tick(context);
 
-        // Solar system tick (handles repair) and get power generation
-        let solar_power = self.solar.tick(context);
+        // Demand side
+        let operations_result = self.operations.tick(context);
+        if operations_result.docking_completed {
+            todo!("Award docking bonus");
+        }
 
-        // Reactor system tick (handles repair)
+        self.total_grid_demand = operations_result.power_consumed;
+
+        // Supply side
+        let solar_power = self.solar.tick(context);
         let reactor_output = self.reactor.tick(context);
+
+        self.total_grid_supply = solar_power + reactor_output;
 
         // Battery tick
         // Calculate power imbalance before battery acts
@@ -152,8 +153,6 @@ impl<'a> GameState<'a> {
             self.total_grid_supply += -power_consumed_by_battery; // Add the absolute value
         }
         self.frequency_hz = self.tick_frequency_hz();
-
-        self.tick_operations(context);
 
         self.last_tick_time = self.mission_time;
     }
