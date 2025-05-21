@@ -76,7 +76,7 @@ impl Battery {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Damage;
+    use crate::damage::Damage;
     use crate::game_variables::GameVariables;
     use crate::tick_context::TickContext;
     use uom::si::energy::kilowatt_hour;

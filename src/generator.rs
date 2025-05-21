@@ -1,4 +1,4 @@
-use crate::Damage;
+use crate::damage::Damage;
 use crate::game_variables::GameVariables;
 use crate::tick_context::TickContext;
 use uom::si::f32::Ratio;

@@ -5,6 +5,8 @@ use uom::si::time::second;
 use uom::si::frequency::hertz;
 use uom::si::ratio::percent;
 
+use crate::ConstOne;
+
 /// Game balancing variables as specified in README.md Table 1.
 pub struct GameVariables {
     /// System Inertia Constant (seconds)
@@ -77,7 +79,7 @@ impl Default for GameVariables {
             solar_nominal_output: Power::new::<watt>(100.0),
             battery_capacity: Energy::new::<kilowatt_hour>(200.0),
             reactor_nominal_output: Power::new::<watt>(500.0),
-            reactor_max_coolant_percentage: Ratio::new::<percent>(100.0),
+            reactor_max_coolant_percentage: Ratio::ONE,
             reactor_coolant_refill_rate: Ratio::new::<percent>(1.0),
             coolant_effectiveness_reduction_rate: Ratio::new::<percent>(0.5),
             colony_damage_repair_rate: Ratio::new::<percent>(0.1),

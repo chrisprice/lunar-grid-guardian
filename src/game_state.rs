@@ -6,9 +6,9 @@ use crate::lunar_phase::{LUNAR_DAY_SECONDS, LunarPhase};
 use crate::operations::OperationsState;
 use crate::solar::SolarState;
 use crate::tick_context::TickContext;
+use crate::ConstOne;
 use uom::si::f32::{Frequency, Power, Ratio, Time};
 use uom::si::frequency::hertz;
-use uom::si::ratio::percent;
 use uom::si::time::second;
 use uom::ConstZero;
 
@@ -76,7 +76,7 @@ impl<'a> GameState<'a> {
             solar: SolarState::default(),
             battery: Battery::default(),
             reactor_state: GeneratorState::default(),
-            reactor_coolant: Ratio::new::<percent>(100.0),
+            reactor_coolant: Ratio::ONE,
             reactor_power: Power::ZERO,
             reactor_temperature: 0.0,
             boost_life_support: 0,
@@ -107,7 +107,7 @@ impl<'a> GameState<'a> {
 
     /// Returns true if the game is over, based on colony damage or frequency deviation.
     pub fn is_game_over(&self) -> bool {
-        self.colony_damage.get::<percent>() >= 100.0
+        self.colony_damage >= Ratio::ONE
             || (self.tick_frequency_hz() - self.game_vars.nominal_frequency)
                 .abs()
                 .get::<hertz>()
