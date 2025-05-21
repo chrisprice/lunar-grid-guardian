@@ -1,8 +1,8 @@
 use uom::si::f32::{Energy, Frequency, Power, PowerRate, Ratio, Time};
 use uom::si::energy::kilowatt_hour;
 use uom::si::power::watt;
-use uom::si::time::{day, minute, second};
 use uom::si::power_rate::watt_per_second;
+use uom::si::time::{day, minute, second};
 use uom::si::frequency::hertz;
 use uom::si::ratio::percent;
 
@@ -43,8 +43,8 @@ pub struct GameVariables {
     pub colony_damage_rate_emergency: Ratio,
     /// Life Support - Base Power Demand (Power units)
     pub life_support_base_power_demand: Power,
-    /// Life Support - Power Demand Increase Rate (Power units per in-game day)
-    pub life_support_power_demand_increase: Power,
+    /// Life Support - Power Demand Increase Rate (ticks once per day))
+    pub life_support_power_demand_increase: PowerRate,
     /// Comms - Power Demand (Power units)
     pub comms_power_demand: Power,
     /// Micrometeorite Damage (to unshielded Solar) (damage %)
@@ -93,7 +93,7 @@ impl Default for GameVariables {
             colony_damage_repair_rate: Ratio::new::<percent>(0.1),
             colony_damage_rate_emergency: Ratio::new::<percent>(0.5),
             life_support_base_power_demand: Power::new::<watt>(100.0),
-            life_support_power_demand_increase: Power::new::<watt>(5.0),
+            life_support_power_demand_increase: Power::new::<watt>(5.0) / Time::new::<day>(1.0),
             comms_power_demand: Power::new::<watt>(20.0),
             micrometeorite_damage_solar: Ratio::new::<percent>(10.0),
             lunar_quake_damage_reactor: Ratio::new::<percent>(15.0),
