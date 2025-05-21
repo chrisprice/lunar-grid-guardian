@@ -9,7 +9,7 @@ const LUNAR_DAY_DURATION: Time = Time {
     value: 29.5 * 24.0 * 60.0 * 60.0,
 };
 
-const LUNAR_PHASE_DURATION: Time = Time {
+pub const LUNAR_PHASE_DURATION: Time = Time {
     dimension: PhantomData,
     units: PhantomData,
     value: LUNAR_DAY_DURATION.value / 2.0,
