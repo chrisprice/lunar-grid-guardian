@@ -2,7 +2,6 @@ use crate::battery::Battery;
 use crate::event_state::EventState;
 use crate::game_variables::GameVariables;
 use crate::generator::GeneratorState;
-use crate::lunar_phase::{LUNAR_DAY_SECONDS, LunarPhase};
 use crate::operations::OperationsState;
 use crate::solar::SolarState;
 use crate::tick_context::TickContext;
@@ -90,21 +89,6 @@ impl<'a> GameState<'a> {
         }
     }
 
-    /// Returns the current lunar phase and time in cycle, derived from mission time and scaling factor.
-    pub fn lunar_phase_and_time(&self) -> LunarPhase {
-        let lunar_seconds = self.mission_time.get::<second>() / self.game_vars.mission_time_scale_factor;
-        let time_in_cycle = lunar_seconds % LUNAR_DAY_SECONDS;
-        if time_in_cycle < (LUNAR_DAY_SECONDS / 2.0) {
-            LunarPhase::Day {
-                elapsed: time_in_cycle,
-            }
-        } else {
-            LunarPhase::Night {
-                elapsed: time_in_cycle,
-            }
-        }
-    }
-
     /// Returns true if the game is over, based on colony damage or frequency deviation.
     pub fn is_game_over(&self) -> bool {
         self.colony_damage >= Ratio::ONE
@@ -162,8 +146,7 @@ impl<'a> GameState<'a> {
         self.solar_flare_event.tick(context);
 
         // Solar system tick (handles repair) and get power generation
-        let lunar_phase = self.lunar_phase_and_time();
-        let solar_power = self.solar.tick(&lunar_phase, context);
+        let solar_power = self.solar.tick(context);
 
         // Reactor system tick (handles repair)
         self.reactor_state.tick(context);
