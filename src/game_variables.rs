@@ -61,8 +61,6 @@ pub struct GameVariables {
     pub operations_base_power_demand: Power,
     /// Operations - Docking Power Spike Magnitude (Power units)
     pub operations_docking_spike_power: Power,
-    /// Operations - Docking Power Spike Duration (seconds)
-    pub operations_docking_spike_duration: Time,
     /// Supply Drop - Timer Interval (seconds)
     pub supply_drop_interval: Time,
     /// Supply Drop - Docking Duration (seconds)
@@ -100,10 +98,9 @@ impl Default for GameVariables {
             lunar_quake_damage_battery: Ratio::new::<percent>(10.0),
             solar_flare_damage_solar_array: Ratio::new::<percent>(20.0),
             solar_flare_spike_damage_battery: Ratio::new::<percent>(10.0),
-            operations_base_power_demand: Power::new::<watt>(100.0),
-            operations_docking_spike_power: Power::new::<watt>(150.0),
-            operations_docking_spike_duration: Time::new::<second>(5.0),
-            supply_drop_interval: Time::new::<second>(300.0),
+            operations_base_power_demand: Power::new::<watt>(30.0),
+            operations_docking_spike_power: Power::new::<watt>(100.0),
+            supply_drop_interval: Time::new::<second>(60.0),
             supply_drop_docking_duration: Time::new::<second>(10.0),
             boost_life_support_amount: Ratio::new::<percent>(25.0),
             boost_battery_amount: Ratio::new::<percent>(25.0),
