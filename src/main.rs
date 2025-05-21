@@ -20,7 +20,7 @@ struct App<'a> {
 }
 
 impl <'a> App<'a> {
-    fn new(game_vars: &'a GameVariables) -> App {
+    fn new(game_vars: &'a GameVariables) -> Self {
         App {
             last_tick: Instant::now(),
             game_state: GameState::new(game_vars),

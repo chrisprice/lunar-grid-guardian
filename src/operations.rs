@@ -14,10 +14,6 @@ pub enum OperationsState {
 }
 
 impl OperationsState {
-    pub fn new() -> Self {
-        OperationsState::Dormant
-    }
-
     /// Ticks the state.
     /// Returns true if docking is completed.
     pub fn tick(&mut self, context: &TickContext) -> bool{

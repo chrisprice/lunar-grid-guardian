@@ -16,8 +16,8 @@ pub struct GameVariables {
     /// Mission Timer - Scaling Factor (real seconds to lunar seconds)
     /// (1 real second = 1 lunar second / scaling factor)
     pub mission_time_scale_factor: f32,
-    /// Repair Duration (seconds per % damage) - Consolidated for all repairable systems
-    pub repair_time_per_damage_unit: Time,
+    /// Repair Duration
+    pub repair_time: Time,
     /// Solar Array - Nominal Output (Power units)
     pub solar_nominal_output: Power,
     /// Battery Capacity (kWh)
@@ -73,7 +73,7 @@ impl Default for GameVariables {
             system_nominal_power_pnom: Power::new::<watt>(1000.0),
             nominal_frequency: Frequency::new::<hertz>(50.0),
             mission_time_scale_factor: 1.0 / (29.5 * 24.0 * 60.0), // one lunar day every 1 minute
-            repair_time_per_damage_unit: Time::new::<second>(2.0), // This value will be used for Solar, Battery, and Reactor repairs
+            repair_time: Time::new::<second>(2.0), // This value will be used for Solar, Battery, and Reactor repairs
             solar_nominal_output: Power::new::<watt>(100.0),
             battery_capacity: Energy::new::<kilowatt_hour>(200.0),
             reactor_nominal_output: Power::new::<watt>(500.0),

@@ -73,9 +73,9 @@ impl<'a> GameState<'a> {
             comms_online: true,
             operations_online: true,
             life_support_emergency: false,
-            solar: SolarState::new(),
-            battery: Battery::new(),
-            reactor_state: GeneratorState::new(),
+            solar: SolarState::default(),
+            battery: Battery::default(),
+            reactor_state: GeneratorState::default(),
             reactor_coolant: Ratio::new::<percent>(100.0),
             reactor_power: Power::ZERO,
             reactor_temperature: 0.0,
@@ -86,7 +86,7 @@ impl<'a> GameState<'a> {
             micrometeorite_event: EventState::Dormant,
             lunar_quake_event: EventState::Dormant,
             solar_flare_event: EventState::Dormant,
-            supply_drop_flow_state: OperationsState::new(),
+            supply_drop_flow_state: OperationsState::default(),
         }
     }
 
