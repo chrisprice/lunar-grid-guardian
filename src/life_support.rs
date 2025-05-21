@@ -11,29 +11,37 @@ use crate::tick_context::TickContext;
 pub struct LifeSupportState {
     /// Current damage to the colony.
     pub colony_damage: Damage,
+    /// Indicates if life support is operating in emergency restrictions mode.
+    pub emergency_restrictions_active: bool,
 }
 
 impl LifeSupportState {
+    /// Activates or deactivates the emergency restrictions mode for life support.
+    pub fn set_emergency_restrictions(&mut self, active: bool) {
+        self.emergency_restrictions_active = active;
+    }
+
     /// Processes a time step for the life support system.
     ///
     /// Returns the calculated power demand for the current tick.
     pub fn tick(&mut self, context: &TickContext) -> Power {
-        if !self.colony_damage.is_undamaged() {
-            // Dividing the repair rate by 1s to work around a lack of RatioRate in uom.
-            self.colony_damage.repair(
-                context.game_vars.colony_damage_repair_rate / Time::new::<second>(1.0)
+        if self.emergency_restrictions_active {
+            self.colony_damage.damage(
+                context.game_vars.colony_damage_rate_emergency / Time::new::<second>(1.0)
                     * context.tick_delta,
             );
-        }
-
-        let current_power_demand = context.game_vars.life_support_base_power_demand
-            + context.game_vars.life_support_power_demand_increase
-                * context.mission_time.floor::<day>();
-
-        if current_power_demand < Power::ZERO {
             Power::ZERO
         } else {
-            current_power_demand
+            if !self.colony_damage.is_undamaged() {
+                self.colony_damage.repair(
+                    context.game_vars.colony_damage_repair_rate / Time::new::<second>(1.0)
+                        * context.tick_delta,
+                );
+            }
+
+            context.game_vars.life_support_base_power_demand
+                + context.game_vars.life_support_power_demand_increase
+                    * context.mission_time.floor::<day>()
         }
     }
 
@@ -177,7 +185,7 @@ mod tests {
         assert_ratio_approx_eq(
             life_support.colony_damage.inner(),
             0.0,
-            "Colony damage repair capped at 0%",
+            "Colony damage repaired to zero",
         );
     }
 
@@ -188,14 +196,14 @@ mod tests {
         assert_ratio_approx_eq(
             life_support.colony_damage.inner(),
             10.0,
-            "Colony damage after applying 10%",
+            "Colony damage after first damage",
         );
 
         life_support.damage(Ratio::new::<percent>(5.0));
         assert_ratio_approx_eq(
             life_support.colony_damage.inner(),
             15.0,
-            "Colony damage after applying additional 5%",
+            "Colony damage after second damage",
         );
     }
 
@@ -214,20 +222,66 @@ mod tests {
     #[test]
     fn test_zero_or_negative_damage_has_no_effect() {
         let mut life_support = LifeSupportState::default();
-        life_support.colony_damage = Damage::new(Ratio::new::<percent>(10.0));
+        life_support.damage(Ratio::new::<percent>(0.0));
+        assert_ratio_approx_eq(life_support.colony_damage.inner(), 0.0, "Zero damage");
 
-        life_support.damage(Ratio::ZERO);
+        life_support.damage(Ratio::new::<percent>(-10.0));
+        assert_ratio_approx_eq(life_support.colony_damage.inner(), 0.0, "Negative damage");
+    }
+
+    #[test]
+    fn test_life_support_emergency_restrictions_mode_power_and_damage() {
+        let mut game_vars = GameVariables::default();
+        game_vars.life_support_base_power_demand = Power::new::<watt>(100.0);
+        game_vars.colony_damage_rate_emergency = Ratio::new::<percent>(5.0);
+
+        let mut life_support = LifeSupportState::default();
+        life_support.set_emergency_restrictions(true);
+
+        let context_tick1 = create_tick_context(&game_vars, 0.0, 1.0);
+        let power_demand_tick1 = life_support.tick(&context_tick1);
+        assert_power_approx_eq(
+            power_demand_tick1,
+            0.0,
+            "Power demand in emergency mode (tick 1)",
+        );
         assert_ratio_approx_eq(
             life_support.colony_damage.inner(),
-            10.0,
-            "Colony damage after applying zero damage",
+            5.0,
+            "Colony damage after 1s in emergency mode",
         );
 
-        life_support.damage(Ratio::new::<percent>(-5.0));
+        let context_tick2 = create_tick_context(&game_vars, 1.0, 2.0);
+        let power_demand_tick2 = life_support.tick(&context_tick2);
+        assert_power_approx_eq(
+            power_demand_tick2,
+            0.0,
+            "Power demand in emergency mode (tick 2)",
+        );
         assert_ratio_approx_eq(
             life_support.colony_damage.inner(),
-            10.0,
-            "Colony damage after applying negative damage",
+            15.0,
+            "Colony damage after 3s total in emergency mode (1s + 2s)",
+        );
+    }
+
+    #[test]
+    fn test_life_support_emergency_restrictions_mode_stops_repair() {
+        let mut game_vars = GameVariables::default();
+        game_vars.colony_damage_repair_rate = Ratio::new::<percent>(1.0);
+        game_vars.colony_damage_rate_emergency = Ratio::new::<percent>(0.5);
+
+        let mut life_support = LifeSupportState::default();
+        life_support.colony_damage = Damage::new(Ratio::new::<percent>(10.0));
+        life_support.set_emergency_restrictions(true);
+
+        let context = create_tick_context(&game_vars, 0.0, 1.0);
+        let _power_demand = life_support.tick(&context);
+
+        assert_ratio_approx_eq(
+            life_support.colony_damage.inner(),
+            10.5,
+            "Colony damage should increase due to emergency rate, not repair",
         );
     }
 }
