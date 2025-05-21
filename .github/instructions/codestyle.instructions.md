@@ -3,6 +3,7 @@ applyTo: '**'
 ---
 # Code Style Guide
 
+* DO NOT ADD ANY COMMENTS TO THE CODE.
 * Avoid comments in the code. Keep narrative content in the chat, not in the files.
 * Doccomments are allowed for public types and functions.
 * Use meaningful variable names rather than shortened or cryptic names.
