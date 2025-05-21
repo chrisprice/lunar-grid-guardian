@@ -6,7 +6,6 @@ use uom::si::power_rate::watt_per_second;
 use uom::si::frequency::hertz;
 use uom::si::ratio::percent;
 
-use crate::ConstOne;
 
 /// Game balancing variables as specified in README.md Table 1.
 pub struct GameVariables {
@@ -28,12 +27,16 @@ pub struct GameVariables {
     pub reactor_nominal_output: Power,
     /// Reactor - Power Ramp Rate
     pub reactor_power_ramp_rate: PowerRate,
-    /// Reactor Max Coolant Capacity (percentage 0-100)
-    pub reactor_max_coolant_percentage: Ratio,
-    /// Reactor Coolant Refill Rate (percentage points per second)
-    pub reactor_coolant_refill_rate: Ratio,
+    /// Reactor Max Coolant Energy Capacity (e.g., kWh)
+    pub reactor_max_coolant_energy_capacity: Energy,
+    /// Reactor Coolant Recharge Rate (e.g., kW)
+    pub reactor_coolant_recharge_rate: Power,
     /// Reactor Coolant Effectiveness Reduction Rate (% effectiveness loss per % reactor damage)
     pub coolant_effectiveness_reduction_rate: Ratio,
+    /// Reactor Thermal Efficiency Factor (Ratio, e.g., 0.8 means 80% efficient, 20% waste heat)
+    pub reactor_thermal_efficiency_factor: Ratio,
+    /// Reactor Critical Thermal Energy (e.g., kWh)
+    pub reactor_critical_thermal_energy: Energy,
     /// Life Support - Colony Damage Repair Rate (percentage points per second)
     pub colony_damage_repair_rate: Ratio,
     /// Life Support - Colony Damage Increase Rate (Emergency) (percentage points per second)
@@ -66,7 +69,7 @@ pub struct GameVariables {
     pub supply_drop_docking_duration: Time,
     pub boost_life_support_amount: Ratio,
     pub boost_battery_amount: Ratio,
-    pub boost_coolant_amount: Ratio,
+    pub boost_coolant_energy_capacity: Energy,
     pub boost_repair_amount: Ratio,
 }
 
@@ -82,9 +85,11 @@ impl Default for GameVariables {
             battery_capacity: Energy::new::<kilowatt_hour>(200.0),
             reactor_nominal_output: Power::new::<watt>(500.0),
             reactor_power_ramp_rate: PowerRate::new::<watt_per_second>(10.0),
-            reactor_max_coolant_percentage: Ratio::ONE,
-            reactor_coolant_refill_rate: Ratio::new::<percent>(1.0),
+            reactor_max_coolant_energy_capacity: Energy::new::<kilowatt_hour>(50.0),
+            reactor_coolant_recharge_rate: Power::new::<watt>(10000.0), // 10kW
             coolant_effectiveness_reduction_rate: Ratio::new::<percent>(0.5),
+            reactor_thermal_efficiency_factor: Ratio::new::<percent>(80.0),
+            reactor_critical_thermal_energy: Energy::new::<kilowatt_hour>(100.0),
             colony_damage_repair_rate: Ratio::new::<percent>(0.1),
             colony_damage_rate_emergency: Ratio::new::<percent>(0.5),
             life_support_base_power_demand: Power::new::<watt>(100.0),
@@ -95,15 +100,15 @@ impl Default for GameVariables {
             lunar_quake_damage_battery: Ratio::new::<percent>(10.0),
             solar_flare_damage_solar_array: Ratio::new::<percent>(20.0),
             solar_flare_spike_damage_battery: Ratio::new::<percent>(10.0),
-            operations_base_power_demand: Power::new::<watt>(30.0),
-            operations_docking_spike_power: Power::new::<watt>(100.0),
+            operations_base_power_demand: Power::new::<watt>(100.0),
+            operations_docking_spike_power: Power::new::<watt>(150.0),
             operations_docking_spike_duration: Time::new::<second>(5.0),
-            supply_drop_interval: Time::new::<second>(60.0),
+            supply_drop_interval: Time::new::<second>(300.0),
             supply_drop_docking_duration: Time::new::<second>(10.0),
-            boost_life_support_amount: Ratio::new::<percent>(10.0),
-            boost_battery_amount: Ratio::new::<percent>(20.0),
-            boost_coolant_amount: Ratio::new::<percent>(20.0),
-            boost_repair_amount: Ratio::new::<percent>(10.0),
+            boost_life_support_amount: Ratio::new::<percent>(25.0),
+            boost_battery_amount: Ratio::new::<percent>(25.0),
+            boost_coolant_energy_capacity: Energy::new::<kilowatt_hour>(10.0),
+            boost_repair_amount: Ratio::new::<percent>(50.0),
         }
     }
 }
