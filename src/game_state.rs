@@ -1,8 +1,8 @@
 use crate::battery::Battery;
 use crate::event_state::EventState;
 use crate::game_variables::GameVariables;
-use crate::generator::GeneratorState;
 use crate::operations::OperationsState;
+use crate::reactor::Reactor;
 use crate::solar::SolarState;
 use crate::tick_context::TickContext;
 use crate::ConstOne;
@@ -32,17 +32,9 @@ pub struct GameState<'a> {
     pub operations_online: bool,
     pub life_support_emergency: bool,
 
-    // Solar specific state encapsulated
     pub solar: SolarState,
-
-    // Battery specific state
     pub battery: Battery,
-
-    // Reactor specific state (0-100%)
-    pub reactor_state: GeneratorState,
-    pub reactor_coolant: Ratio,
-    pub reactor_power: Power,
-    pub reactor_temperature: f32,
+    pub reactor: Reactor,
 
     // Operations/boosts
     pub boost_life_support: u32,
@@ -74,10 +66,7 @@ impl<'a> GameState<'a> {
             life_support_emergency: false,
             solar: SolarState::default(),
             battery: Battery::default(),
-            reactor_state: GeneratorState::default(),
-            reactor_coolant: Ratio::ONE,
-            reactor_power: Power::ZERO,
-            reactor_temperature: 0.0,
+            reactor: Reactor::default(),
             boost_life_support: 0,
             boost_battery: 0,
             boost_coolant: 0,
@@ -149,9 +138,7 @@ impl<'a> GameState<'a> {
         let solar_power = self.solar.tick(context);
 
         // Reactor system tick (handles repair)
-        self.reactor_state.tick(context);
-        // TODO: Get reactor power output, e.g.,
-        // let reactor_power_output = calculate_reactor_power(&self.reactor_state, self.reactor_power, game_vars);
+        let reactor_output = self.reactor.tick(context);
 
         // Battery tick
         // Calculate power imbalance before battery acts

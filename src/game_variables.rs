@@ -1,7 +1,8 @@
-use uom::si::f32::{Energy, Power, Time, Frequency, Ratio};
+use uom::si::f32::{Energy, Frequency, Power, PowerRate, Ratio, Time};
 use uom::si::energy::kilowatt_hour;
 use uom::si::power::watt;
 use uom::si::time::{day, minute, second};
+use uom::si::power_rate::watt_per_second;
 use uom::si::frequency::hertz;
 use uom::si::ratio::percent;
 
@@ -25,6 +26,8 @@ pub struct GameVariables {
     pub battery_capacity: Energy,
     /// Reactor - Nominal Output (Power units)
     pub reactor_nominal_output: Power,
+    /// Reactor - Power Ramp Rate
+    pub reactor_power_ramp_rate: PowerRate,
     /// Reactor Max Coolant Capacity (percentage 0-100)
     pub reactor_max_coolant_percentage: Ratio,
     /// Reactor Coolant Refill Rate (percentage points per second)
@@ -78,6 +81,7 @@ impl Default for GameVariables {
             solar_nominal_output: Power::new::<watt>(100.0),
             battery_capacity: Energy::new::<kilowatt_hour>(200.0),
             reactor_nominal_output: Power::new::<watt>(500.0),
+            reactor_power_ramp_rate: PowerRate::new::<watt_per_second>(10.0),
             reactor_max_coolant_percentage: Ratio::ONE,
             reactor_coolant_refill_rate: Ratio::new::<percent>(1.0),
             coolant_effectiveness_reduction_rate: Ratio::new::<percent>(0.5),
