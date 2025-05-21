@@ -27,12 +27,18 @@ impl Damage {
         self.value
     }
     pub fn damage(&mut self, amount: Ratio) {
+        if amount < Ratio::ZERO {
+            return;
+        }
         self.value += amount;
         if self.value > Ratio::ONE {
             self.value = Ratio::ONE;
         }
     }
     pub fn repair(&mut self, amount: Ratio) {
+        if amount < Ratio::ZERO {
+            return;
+        }
         self.value -= amount;
         if self.value < Ratio::ZERO {
             self.value = Ratio::ZERO;
