@@ -1,7 +1,7 @@
 use uom::si::f32::{Energy, Power, Time, Frequency, Ratio};
 use uom::si::energy::kilowatt_hour;
 use uom::si::power::watt;
-use uom::si::time::second;
+use uom::si::time::{day, minute, second};
 use uom::si::frequency::hertz;
 use uom::si::ratio::percent;
 
@@ -15,9 +15,8 @@ pub struct GameVariables {
     pub system_nominal_power_pnom: Power,
     /// Nominal System Frequency (Hertz)
     pub nominal_frequency: Frequency,
-    /// Mission Timer - Scaling Factor (real seconds to lunar seconds)
-    /// (1 real second = 1 lunar second / scaling factor)
-    pub mission_time_scale_factor: f32,
+    /// Mission Timer - Scaling Factor
+    pub mission_time_per_lunar_time: Ratio,
     /// Repair Duration
     pub repair_time: Time,
     /// Solar Array - Nominal Output (Power units)
@@ -74,8 +73,8 @@ impl Default for GameVariables {
             system_inertia_h: Time::new::<second>(10.0),
             system_nominal_power_pnom: Power::new::<watt>(1000.0),
             nominal_frequency: Frequency::new::<hertz>(50.0),
-            mission_time_scale_factor: 1.0 / (29.5 * 24.0 * 60.0), // one lunar day every 1 minute
-            repair_time: Time::new::<second>(2.0), // This value will be used for Solar, Battery, and Reactor repairs
+            mission_time_per_lunar_time: Time::new::<minute>(1.0) / Time::new::<day>(29.5),
+            repair_time: Time::new::<second>(2.0),
             solar_nominal_output: Power::new::<watt>(100.0),
             battery_capacity: Energy::new::<kilowatt_hour>(200.0),
             reactor_nominal_output: Power::new::<watt>(500.0),

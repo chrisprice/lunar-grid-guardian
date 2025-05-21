@@ -25,7 +25,7 @@ pub enum LunarPhase {
 impl LunarPhase {
     pub fn from_tick_context(tick_context: &TickContext) -> Self {
         let lunar_time =
-            tick_context.mission_time * tick_context.game_vars.mission_time_scale_factor;
+            tick_context.mission_time / tick_context.game_vars.mission_time_per_lunar_time;
         let elapsed = lunar_time % LUNAR_DAY_DURATION;
         if lunar_time % LUNAR_DAY_DURATION < LUNAR_PHASE_DURATION {
             LunarPhase::Day { elapsed }
