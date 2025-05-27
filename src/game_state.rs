@@ -169,8 +169,7 @@ impl<'a> GameState<'a> {
     pub fn use_life_support_boost(&mut self) {
         if self.boost_life_support > 0 {
             self.boost_life_support -= 1;
-            todo!("Implement life support boost logic");
-            // self.life_support.boost(self.game_vars);
+            self.life_support.boost(self.game_vars);
         }
     }
 

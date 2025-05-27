@@ -2,6 +2,7 @@ use uom::ConstZero;
 use uom::si::f32::{Power, Time};
 use uom::si::time::{day, second};
 
+use crate::game_variables::GameVariables;
 use crate::system::system::System;
 use crate::tick_context::TickContext;
 
@@ -42,6 +43,12 @@ impl LifeSupport {
             context.game_vars.life_support_base_power_demand
                 + context.game_vars.life_support_power_demand_increase
                     * context.mission_time.floor::<day>()
+        }
+    }
+    
+    pub fn boost(&mut self, game_vars: &GameVariables) {
+        if let System::Online { damage } = &mut self.system {
+            damage.repair(game_vars.boost_life_support_amount);
         }
     }
 }
