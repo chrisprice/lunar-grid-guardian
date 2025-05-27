@@ -92,7 +92,7 @@ impl<'a> GameState<'a> {
 
     /// Derives the next frequency_hz value based on the swing equation and current state.
     pub fn tick_frequency_hz(&self) -> Frequency {
-        let power_imbalance = self.total_grid_demand - self.total_grid_supply;
+        let power_imbalance = self.total_grid_supply - self.total_grid_demand;
         let delta_p = power_imbalance;
         let h = self.game_vars.system_inertia_h;
         let pnom = self.game_vars.system_nominal_power_pnom;
@@ -154,7 +154,7 @@ impl<'a> GameState<'a> {
 
         // Battery tick
         // Calculate power imbalance before battery acts
-        let power_imbalance = self.total_grid_demand - self.total_grid_supply;
+        let power_imbalance = self.total_grid_supply - self.total_grid_demand;
         let power_consumed_by_battery = self.battery.tick(context, power_imbalance);
         // If battery consumes power (charges), it increases demand.
         // If battery supplies power (discharges), it increases supply.

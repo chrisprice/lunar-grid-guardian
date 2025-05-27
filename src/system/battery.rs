@@ -33,8 +33,8 @@ impl Battery {
     /// Processes a time step for the battery.
     ///
     /// # Arguments
-    /// * `power_imbalance` - The current power imbalance on the grid (demand - supply).
-    ///                          Positive means demand > supply, negative means supply > demand.
+    /// * `power_imbalance` - The current power imbalance on the grid (supply - demand).
+    ///                          Positive means supply > demand (surplus), negative means demand > supply (deficit).
     ///
     /// # Returns
     /// The amount of power consumed by the battery from the grid.
@@ -43,13 +43,13 @@ impl Battery {
         self.generator.tick(context);
 
         let operation = match self.mode {
-            BatteryMode::Charge | BatteryMode::Auto if power_imbalance < Power::ZERO => {
+            BatteryMode::Charge | BatteryMode::Auto if power_imbalance > Power::ZERO => {
                 Some(BatteryOperation::Charge)
             }
-            BatteryMode::Discharge | BatteryMode::Auto if power_imbalance > Power::ZERO => {
+            BatteryMode::Discharge | BatteryMode::Auto if power_imbalance < Power::ZERO => {
                 Some(BatteryOperation::Discharge)
             }
-            BatteryMode::Charge | BatteryMode::Discharge | BatteryMode::Auto => None,
+            _ => None,
         };
 
         let System::Online { damage } = self.generator else {
@@ -137,7 +137,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(5.0),
             mode: BatteryMode::Auto,
         };
-        let power_imbalance = Power::new::<kilowatt>(-1.0);
+        let power_imbalance = Power::new::<kilowatt>(1.0); // Surplus
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -155,7 +155,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(5.0),
             mode: BatteryMode::Charge,
         };
-        let power_imbalance = Power::new::<kilowatt>(-1.0);
+        let power_imbalance = Power::new::<kilowatt>(1.0); // Surplus
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -173,7 +173,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(9.5),
             mode: BatteryMode::Charge,
         };
-        let power_imbalance = Power::new::<kilowatt>(-1.0);
+        let power_imbalance = Power::new::<kilowatt>(1.0); // Surplus
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -191,7 +191,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(10.0),
             mode: BatteryMode::Charge,
         };
-        let power_imbalance = Power::new::<kilowatt>(-1.0);
+        let power_imbalance = Power::new::<kilowatt>(1.0); // Surplus
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -209,7 +209,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(5.0),
             mode: BatteryMode::Charge,
         };
-        let power_imbalance = Power::new::<kilowatt>(1.0);
+        let power_imbalance = Power::new::<kilowatt>(-1.0); // Deficit
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -227,7 +227,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(2.0),
             mode: BatteryMode::Charge,
         };
-        let power_imbalance = Power::new::<kilowatt>(-1.0);
+        let power_imbalance = Power::new::<kilowatt>(1.0); // Surplus
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -245,7 +245,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(5.0),
             mode: BatteryMode::Discharge,
         };
-        let power_imbalance = Power::new::<kilowatt>(1.0);
+        let power_imbalance = Power::new::<kilowatt>(-1.0); // Deficit
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -263,7 +263,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(0.5),
             mode: BatteryMode::Discharge,
         };
-        let power_imbalance = Power::new::<kilowatt>(1.0);
+        let power_imbalance = Power::new::<kilowatt>(-1.0); // Deficit
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -281,7 +281,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(0.0),
             mode: BatteryMode::Discharge,
         };
-        let power_imbalance = Power::new::<kilowatt>(1.0);
+        let power_imbalance = Power::new::<kilowatt>(-1.0); // Deficit
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -299,7 +299,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(5.0),
             mode: BatteryMode::Discharge,
         };
-        let power_imbalance = Power::new::<kilowatt>(-1.0);
+        let power_imbalance = Power::new::<kilowatt>(1.0); // Surplus
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -317,7 +317,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(6.0),
             mode: BatteryMode::Discharge,
         };
-        let power_imbalance = Power::new::<kilowatt>(1.0);
+        let power_imbalance = Power::new::<kilowatt>(-1.0); // Deficit
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -335,7 +335,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(5.0),
             mode: BatteryMode::Auto,
         };
-        let power_imbalance = Power::new::<kilowatt>(-1.0);
+        let power_imbalance = Power::new::<kilowatt>(1.0); // Surplus
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -353,7 +353,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(5.0),
             mode: BatteryMode::Auto,
         };
-        let power_imbalance = Power::new::<kilowatt>(1.0);
+        let power_imbalance = Power::new::<kilowatt>(-1.0);
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -389,7 +389,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(5.0),
             mode: BatteryMode::Auto,
         };
-        let power_imbalance = Power::new::<kilowatt>(-1.0);
+        let power_imbalance = Power::new::<kilowatt>(1.0);
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
 
@@ -407,7 +407,7 @@ mod tests {
             charge: Energy::new::<kilowatt_hour>(5.0),
             mode: BatteryMode::Auto,
         };
-        let power_imbalance = Power::new::<kilowatt>(1.0);
+        let power_imbalance = Power::new::<kilowatt>(-1.0);
 
         let power_consumed = battery.tick(&tick_context, power_imbalance);
         assert_power_eq(power_consumed, -1.0, "Power consumed");
