@@ -3,7 +3,7 @@ use crate::event_state::EventState;
 use crate::game_variables::GameVariables;
 use crate::system::operations::OperationsState;
 use crate::system::reactor::Reactor;
-use crate::system::solar::SolarState;
+use crate::system::solar::Solar;
 use crate::tick_context::TickContext;
 use crate::ConstOne;
 use uom::si::f32::{Frequency, Power, Ratio, Time};
@@ -32,7 +32,7 @@ pub struct GameState<'a> {
     pub operations_online: bool,
     pub life_support_emergency: bool,
 
-    pub solar: SolarState,
+    pub solar: Solar,
     pub battery: Battery,
     pub reactor: Reactor,
 
@@ -64,7 +64,7 @@ impl<'a> GameState<'a> {
             comms_online: true,
             operations_online: true,
             life_support_emergency: false,
-            solar: SolarState::default(),
+            solar: Solar::default(),
             battery: Battery::default(),
             reactor: Reactor::default(),
             boost_life_support: 0,

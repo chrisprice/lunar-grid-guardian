@@ -1,4 +1,4 @@
-use crate::system::system::SystemState;
+use crate::system::system::System;
 use crate::lunar_phase::LunarPhase;
 use crate::tick_context::TickContext;
 use std::f32::consts::PI;
@@ -7,18 +7,18 @@ use uom::si::f32::Power;
 use uom::si::ratio::ratio;
 
 #[derive(Debug, Default)]
-pub struct SolarState {
-    pub generator_state: SystemState,
+pub struct Solar {
+    pub generator: System,
     pub shields_active: bool,
 }
 
-impl SolarState {
+impl Solar {
     /// Ticks the solar state.
     /// Returns the amount of power generated.
     pub fn tick(&mut self, context: &TickContext) -> Power {
-        self.generator_state.tick(context);
+        self.generator.tick(context);
 
-        let SystemState::Online { damage } = self.generator_state else {
+        let System::Online { damage } = self.generator else {
             return Power::ZERO;
         };
 
@@ -41,7 +41,7 @@ mod tests {
     use super::*;
     use crate::damage::Damage;
     use crate::game_variables::GameVariables;
-    use crate::system::system::SystemState;
+    use crate::system::system::System;
     use crate::lunar_phase::LUNAR_PHASE_DURATION;
     use crate::tick_context::TickContext;
     use std::f32::consts::PI;
@@ -50,17 +50,17 @@ mod tests {
     use uom::si::ratio::ratio;
     use uom::si::time::second;
 
-    fn solar_state_online(damage_value: f32, shields_active: bool) -> SolarState {
-        SolarState {
-            generator_state: SystemState::Online {
+    fn solar_online(damage_value: f32, shields_active: bool) -> Solar {
+        Solar {
+            generator: System::Online {
                 damage: Damage::new(Ratio::new::<ratio>(damage_value)),
             },
             shields_active,
         }
     }
 
-    fn solar_state_default_online_shields_off() -> SolarState {
-        solar_state_online(0.0, false)
+    fn solar_default_online_shields_off() -> Solar {
+        solar_online(0.0, false)
     }
 
     fn assert_power_approx_eq(
@@ -129,8 +129,8 @@ mod tests {
     fn test_solar_power_at_sunrise() {
         let game_vars = default_game_vars(NOMINAL_SOLAR_OUTPUT, MISSION_TIME_PER_LUNAR_TIME_RATIO);
         let context = create_day_tick_context(&game_vars, 0.0);
-        let mut solar_state = solar_state_default_online_shields_off();
-        let power = solar_state.tick(&context);
+        let mut solar = solar_default_online_shields_off();
+        let power = solar.tick(&context);
         assert_power_approx_eq(power, 0.0, 1e-6, "Power at sunrise");
     }
 
@@ -138,8 +138,8 @@ mod tests {
     fn test_solar_power_at_midday() {
         let game_vars = default_game_vars(NOMINAL_SOLAR_OUTPUT, MISSION_TIME_PER_LUNAR_TIME_RATIO);
         let context = create_day_tick_context(&game_vars, 0.5);
-        let mut solar_state = solar_state_default_online_shields_off();
-        let power = solar_state.tick(&context);
+        let mut solar = solar_default_online_shields_off();
+        let power = solar.tick(&context);
         let expected_power = NOMINAL_SOLAR_OUTPUT * (0.5 * PI).sin();
         assert_power_approx_eq(power, expected_power, 1e-6, "Power at midday");
     }
@@ -148,8 +148,8 @@ mod tests {
     fn test_solar_power_at_sunset() {
         let game_vars = default_game_vars(NOMINAL_SOLAR_OUTPUT, MISSION_TIME_PER_LUNAR_TIME_RATIO);
         let context = create_day_tick_context(&game_vars, 1.0);
-        let mut solar_state = solar_state_default_online_shields_off();
-        let power = solar_state.tick(&context);
+        let mut solar = solar_default_online_shields_off();
+        let power = solar.tick(&context);
         assert_power_approx_eq(power, 0.0, 1e-6, "Power at sunset");
     }
 
@@ -157,8 +157,8 @@ mod tests {
     fn test_solar_power_just_before_sunset() {
         let game_vars = default_game_vars(NOMINAL_SOLAR_OUTPUT, MISSION_TIME_PER_LUNAR_TIME_RATIO);
         let context = create_day_tick_context(&game_vars, 0.999);
-        let mut solar_state = solar_state_default_online_shields_off();
-        let power = solar_state.tick(&context);
+        let mut solar = solar_default_online_shields_off();
+        let power = solar.tick(&context);
         let expected_intensity = (0.999 * PI).sin();
         let expected_power = NOMINAL_SOLAR_OUTPUT * expected_intensity;
         assert_power_approx_eq(power, expected_power, 1e-3, "Power just before sunset");
@@ -168,8 +168,8 @@ mod tests {
     fn test_solar_power_at_quarter_day() {
         let game_vars = default_game_vars(NOMINAL_SOLAR_OUTPUT, MISSION_TIME_PER_LUNAR_TIME_RATIO);
         let context = create_day_tick_context(&game_vars, 0.25);
-        let mut solar_state = solar_state_default_online_shields_off();
-        let power = solar_state.tick(&context);
+        let mut solar = solar_default_online_shields_off();
+        let power = solar.tick(&context);
         let expected_intensity = (0.25 * PI).sin();
         let expected_power = NOMINAL_SOLAR_OUTPUT * expected_intensity;
         assert_power_approx_eq(power, expected_power, 1e-6, "Power at quarter day");
@@ -179,8 +179,8 @@ mod tests {
     fn test_solar_power_at_three_quarter_day() {
         let game_vars = default_game_vars(NOMINAL_SOLAR_OUTPUT, MISSION_TIME_PER_LUNAR_TIME_RATIO);
         let context = create_day_tick_context(&game_vars, 0.75);
-        let mut solar_state = solar_state_default_online_shields_off();
-        let power = solar_state.tick(&context);
+        let mut solar = solar_default_online_shields_off();
+        let power = solar.tick(&context);
         let expected_intensity = (0.75 * PI).sin();
         let expected_power = NOMINAL_SOLAR_OUTPUT * expected_intensity;
         assert_power_approx_eq(power, expected_power, 1e-6, "Power at three quarter day");
@@ -190,8 +190,8 @@ mod tests {
     fn test_solar_power_during_night() {
         let game_vars = default_game_vars(NOMINAL_SOLAR_OUTPUT, MISSION_TIME_PER_LUNAR_TIME_RATIO);
         let context = create_night_tick_context(&game_vars, 0.5);
-        let mut solar_state = solar_state_default_online_shields_off();
-        let power = solar_state.tick(&context);
+        let mut solar = solar_default_online_shields_off();
+        let power = solar.tick(&context);
         assert_power_approx_eq(power, 0.0, 1e-6, "Power during night");
     }
 
@@ -199,8 +199,8 @@ mod tests {
     fn test_solar_power_with_shields_active_during_day() {
         let game_vars = default_game_vars(NOMINAL_SOLAR_OUTPUT, MISSION_TIME_PER_LUNAR_TIME_RATIO);
         let context = create_day_tick_context(&game_vars, 0.5);
-        let mut solar_state = solar_state_online(0.0, true);
-        let power = solar_state.tick(&context);
+        let mut solar = solar_online(0.0, true);
+        let power = solar.tick(&context);
         assert_power_approx_eq(power, 0.0, 1e-6, "Power with shields active during day");
     }
 
@@ -208,11 +208,11 @@ mod tests {
     fn test_solar_power_generator_offline() {
         let game_vars = default_game_vars(NOMINAL_SOLAR_OUTPUT, MISSION_TIME_PER_LUNAR_TIME_RATIO);
         let context = create_day_tick_context(&game_vars, 0.5);
-        let mut solar_state = SolarState {
-            generator_state: SystemState::Offline,
+        let mut solar = Solar {
+            generator: System::Offline,
             shields_active: false,
         };
-        let power = solar_state.tick(&context);
+        let power = solar.tick(&context);
         assert_power_approx_eq(power, 0.0, 1e-6, "Power with generator offline");
     }
 
@@ -221,8 +221,8 @@ mod tests {
         let game_vars = default_game_vars(NOMINAL_SOLAR_OUTPUT, MISSION_TIME_PER_LUNAR_TIME_RATIO);
         let context = create_day_tick_context(&game_vars, 0.5);
         let damage_percentage = 0.25;
-        let mut solar_state = solar_state_online(damage_percentage, false);
-        let power = solar_state.tick(&context);
+        let mut solar = solar_online(damage_percentage, false);
+        let power = solar.tick(&context);
         let intensity_factor = (0.5 * PI).sin();
         let expected_power_before_damage = NOMINAL_SOLAR_OUTPUT * intensity_factor;
         let expected_power_after_damage = expected_power_before_damage * (1.0 - damage_percentage);

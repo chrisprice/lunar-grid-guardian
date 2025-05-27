@@ -5,13 +5,13 @@ use uom::si::f32::Ratio;
 use uom::si::f32::Time;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum SystemState {
+pub enum System {
     Online { damage: Damage },
     Offline,
     Repairing { event_end: Time },
 }
 
-impl Default for SystemState {
+impl Default for System {
     fn default() -> Self {
         Self::Online {
             damage: Damage::default(),
@@ -19,7 +19,7 @@ impl Default for SystemState {
     }
 }
 
-impl SystemState {
+impl System {
     pub fn repair(self, current_mission_time: Time, game_vars: &GameVariables) -> Self {
         match self {
             Self::Repairing { .. } => self,

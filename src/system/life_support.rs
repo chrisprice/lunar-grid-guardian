@@ -8,14 +8,14 @@ use crate::tick_context::TickContext;
 /// Represents the state of the life support system.
 /// Manages colony damage and calculates power consumption.
 #[derive(Debug, Default)]
-pub struct LifeSupportState {
+pub struct LifeSupport {
     /// Current damage to the colony.
     pub colony_damage: Damage,
     /// Indicates if life support is operating in emergency restrictions mode.
     pub emergency_restrictions_active: bool,
 }
 
-impl LifeSupportState {
+impl LifeSupport {
     /// Activates or deactivates the emergency restrictions mode for life support.
     pub fn set_emergency_restrictions(&mut self, active: bool) {
         self.emergency_restrictions_active = active;
@@ -98,8 +98,8 @@ mod tests {
     }
 
     #[test]
-    fn test_life_support_initial_state() {
-        let life_support = LifeSupportState::default();
+    fn test_life_support_initial() {
+        let life_support = LifeSupport::default();
         assert_ratio_approx_eq(
             life_support.colony_damage.inner(),
             0.0,
@@ -114,7 +114,7 @@ mod tests {
         game_vars.life_support_power_demand_increase =
             Power::new::<watt>(10.0) / Time::new::<day>(1.0);
 
-        let mut life_support = LifeSupportState::default();
+        let mut life_support = LifeSupport::default();
         let context = create_tick_context(&game_vars, 0.0, 1.0);
         let power_demand = life_support.tick(&context);
 
@@ -128,7 +128,7 @@ mod tests {
         game_vars.life_support_power_demand_increase =
             Power::new::<watt>(10.0) / Time::new::<day>(1.0);
 
-        let mut life_support = LifeSupportState::default();
+        let mut life_support = LifeSupport::default();
 
         let context_almost_one_day = create_tick_context(&game_vars, 86400.0 - 1.0, 1.0);
         let power_demand_almost_one_day = life_support.tick(&context_almost_one_day);
@@ -152,7 +152,7 @@ mod tests {
         let mut game_vars = GameVariables::default();
         game_vars.colony_damage_repair_rate = Ratio::new::<percent>(1.0);
 
-        let mut life_support = LifeSupportState::default();
+        let mut life_support = LifeSupport::default();
         life_support.colony_damage = Damage::new(Ratio::new::<percent>(10.0));
 
         let context_1s = create_tick_context(&game_vars, 0.0, 1.0);
@@ -177,7 +177,7 @@ mod tests {
         let mut game_vars = GameVariables::default();
         game_vars.colony_damage_repair_rate = Ratio::new::<percent>(5.0);
 
-        let mut life_support = LifeSupportState::default();
+        let mut life_support = LifeSupport::default();
         life_support.colony_damage = Damage::new(Ratio::new::<percent>(3.0));
 
         let context = create_tick_context(&game_vars, 0.0, 1.0);
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn test_damage() {
-        let mut life_support = LifeSupportState::default();
+        let mut life_support = LifeSupport::default();
         life_support.damage(Ratio::new::<percent>(10.0));
         assert_ratio_approx_eq(
             life_support.colony_damage.inner(),
@@ -209,7 +209,7 @@ mod tests {
 
     #[test]
     fn test_damage_caps_at_100_percent() {
-        let mut life_support = LifeSupportState::default();
+        let mut life_support = LifeSupport::default();
         life_support.damage(Ratio::new::<percent>(60.0));
         life_support.damage(Ratio::new::<percent>(50.0));
         assert_ratio_approx_eq(
@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn test_zero_or_negative_damage_has_no_effect() {
-        let mut life_support = LifeSupportState::default();
+        let mut life_support = LifeSupport::default();
         life_support.damage(Ratio::new::<percent>(0.0));
         assert_ratio_approx_eq(life_support.colony_damage.inner(), 0.0, "Zero damage");
 
@@ -235,7 +235,7 @@ mod tests {
         game_vars.life_support_base_power_demand = Power::new::<watt>(100.0);
         game_vars.colony_damage_rate_emergency = Ratio::new::<percent>(5.0);
 
-        let mut life_support = LifeSupportState::default();
+        let mut life_support = LifeSupport::default();
         life_support.set_emergency_restrictions(true);
 
         let context_tick1 = create_tick_context(&game_vars, 0.0, 1.0);
@@ -271,7 +271,7 @@ mod tests {
         game_vars.colony_damage_repair_rate = Ratio::new::<percent>(1.0);
         game_vars.colony_damage_rate_emergency = Ratio::new::<percent>(0.5);
 
-        let mut life_support = LifeSupportState::default();
+        let mut life_support = LifeSupport::default();
         life_support.colony_damage = Damage::new(Ratio::new::<percent>(10.0));
         life_support.set_emergency_restrictions(true);
 
