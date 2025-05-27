@@ -27,10 +27,6 @@ pub struct GameState<'a> {
     pub total_grid_demand: Power,
     pub frequency_hz: Frequency,
 
-    pub comms_online: bool,
-    pub operations_online: bool,
-    pub life_support_emergency: bool,
-
     // Supply
     pub solar: Solar,
     pub battery: Battery,
@@ -62,9 +58,6 @@ impl<'a> GameState<'a> {
             total_grid_supply: Power::ZERO,
             total_grid_demand: Power::ZERO,
             frequency_hz: game_vars.nominal_frequency,
-            comms_online: true,
-            operations_online: true,
-            life_support_emergency: false,
             solar: Solar::default(),
             battery: Battery::default(),
             reactor: Reactor::default(),
