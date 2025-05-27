@@ -79,14 +79,4 @@ impl Operations {
         }
         false
     }
-
-    pub fn repair(&mut self, context: &TickContext) {
-        self.system = self
-            .system
-            .repair(context.mission_time, context.game_vars);
-    }
-
-    pub fn damage(&mut self, amount: uom::si::f32::Ratio) {
-        self.system.damage(amount);
-    }
 }
