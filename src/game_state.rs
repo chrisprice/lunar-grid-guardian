@@ -190,7 +190,10 @@ impl<'a> GameState<'a> {
     pub fn use_repair_boost(&mut self) {
         if self.boost_repair > 0 {
             self.boost_repair -= 1;
-            todo!("Implement repair boost logic");
+            self.battery.generator.boost(self.game_vars);
+            self.operations.system.boost(self.game_vars);
+            self.reactor.generator.boost(self.game_vars);
+            self.solar.generator.boost(self.game_vars);
         }
     }
 }

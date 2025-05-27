@@ -35,6 +35,7 @@ impl System {
             }
         }
     }
+
     pub fn damage(&mut self, amount: Ratio) {
         match self {
             Self::Online { damage } => {
@@ -44,6 +45,12 @@ impl System {
                 }
             }
             Self::Offline | Self::Repairing { .. } => {}
+        }
+    }
+
+    pub fn boost(&mut self, game_vars: &GameVariables) {
+        if let Self::Online { damage } = self {
+            damage.repair(game_vars.boost_repair_amount);
         }
     }
 
