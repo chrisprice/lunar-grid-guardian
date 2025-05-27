@@ -1,5 +1,5 @@
 use crate::ConstOne;
-use crate::system::state::SystemState;
+use crate::system::system::SystemState;
 use crate::tick_context::TickContext;
 use uom::ConstZero;
 use uom::si::f32::{Energy, Power, Ratio};
