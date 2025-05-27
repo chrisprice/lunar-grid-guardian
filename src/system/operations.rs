@@ -18,7 +18,7 @@ pub enum SupplyDrop {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct OperationsState {
+pub struct Operations {
     pub system: System,
     pub supply_drop: SupplyDrop,
 }
@@ -28,7 +28,7 @@ pub struct TickResult {
     pub docking_completed: bool,
 }
 
-impl OperationsState {
+impl Operations {
     /// Ticks the state.
     /// Returns TickResult indicating power consumed and if docking completed.
     pub fn tick(&mut self, context: &TickContext) -> TickResult {

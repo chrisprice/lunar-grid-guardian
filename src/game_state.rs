@@ -3,7 +3,7 @@ use crate::event_state::EventState;
 use crate::game_variables::GameVariables;
 use crate::system::battery::Battery;
 use crate::system::life_support::LifeSupport;
-use crate::system::operations::OperationsState;
+use crate::system::operations::Operations;
 use crate::system::reactor::Reactor;
 use crate::system::solar::Solar;
 use crate::tick_context::TickContext;
@@ -50,7 +50,7 @@ pub struct GameState<'a> {
     pub solar_flare_event: EventState,
 
     // Operations state
-    pub operations: OperationsState,
+    pub operations: Operations,
 }
 
 impl<'a> GameState<'a> {
@@ -77,7 +77,7 @@ impl<'a> GameState<'a> {
             micrometeorite_event: EventState::Dormant,
             lunar_quake_event: EventState::Dormant,
             solar_flare_event: EventState::Dormant,
-            operations: OperationsState::default(),
+            operations: Operations::default(),
         }
     }
 
