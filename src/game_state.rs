@@ -1,15 +1,16 @@
-use crate::system::battery::Battery;
+use crate::ConstOne;
 use crate::event_state::EventState;
 use crate::game_variables::GameVariables;
+use crate::system::battery::Battery;
+use crate::system::life_support::LifeSupport;
 use crate::system::operations::OperationsState;
 use crate::system::reactor::Reactor;
 use crate::system::solar::Solar;
 use crate::tick_context::TickContext;
-use crate::ConstOne;
+use uom::ConstZero;
 use uom::si::f32::{Frequency, Power, Ratio, Time};
 use uom::si::frequency::hertz;
 use uom::si::time::second;
-use uom::ConstZero;
 
 pub struct GameState<'a> {
     /// Game variables for the current game.
@@ -35,6 +36,7 @@ pub struct GameState<'a> {
     pub solar: Solar,
     pub battery: Battery,
     pub reactor: Reactor,
+    pub life_support: LifeSupport,
 
     // Operations/boosts
     pub boost_life_support: u32,
@@ -67,6 +69,7 @@ impl<'a> GameState<'a> {
             solar: Solar::default(),
             battery: Battery::default(),
             reactor: Reactor::default(),
+            life_support: LifeSupport::default(),
             boost_life_support: 0,
             boost_battery: 0,
             boost_coolant: 0,
@@ -140,7 +143,8 @@ impl<'a> GameState<'a> {
             }
         }
 
-        self.total_grid_demand = operations_result.power_consumed;
+        let life_support_power_demand = self.life_support.tick(context);
+        self.total_grid_demand = operations_result.power_consumed + life_support_power_demand;
 
         // Supply side
         let solar_power = self.solar.tick(context);
@@ -167,11 +171,11 @@ impl<'a> GameState<'a> {
     pub fn use_life_support_boost(&mut self) {
         if self.boost_life_support > 0 {
             self.boost_life_support -= 1;
-            todo!( "Implement life support boost logic");
+            todo!("Implement life support boost logic");
             // self.life_support.boost(self.game_vars);
         }
     }
-    
+
     pub fn use_battery_boost(&mut self) {
         if self.boost_battery > 0 {
             self.boost_battery -= 1;
@@ -189,7 +193,7 @@ impl<'a> GameState<'a> {
     pub fn use_repair_boost(&mut self) {
         if self.boost_repair > 0 {
             self.boost_repair -= 1;
-            todo!( "Implement repair boost logic");
+            todo!("Implement repair boost logic");
         }
     }
 }

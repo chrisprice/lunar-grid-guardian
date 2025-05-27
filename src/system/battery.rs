@@ -1,8 +1,6 @@
+use crate::game_variables::GameVariables;
 use crate::system::system::System;
 use crate::tick_context::TickContext;
-use crate::game_variables::GameVariables;
-use crate::system::SystemState;
-use crate::tick_context::{self, TickContext};
 use uom::ConstZero;
 use uom::si::f32::{Energy, Power};
 
@@ -76,7 +74,7 @@ impl Battery {
     }
 
     pub fn boost(&mut self, game_vars: &GameVariables) {
-        if let SystemState::Online { damage } = self.generator_state {
+        if let System::Online { damage } = self.generator {
             let effective_capacity: Energy = damage.apply(game_vars.battery_capacity);
             let remaining_capacity: Energy = effective_capacity - self.charge;
             self.charge += remaining_capacity.min(game_vars.boost_battery_amount);

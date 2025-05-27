@@ -159,7 +159,7 @@ mod tests {
     fn test_set_target_power_output_online_generator() {
         let tick_context = setup_test_environment(1.0, 100.0, 10.0);
         let mut reactor = Reactor {
-            generator: SystemState::Online {
+            generator: System::Online {
                 damage: Damage::default(),
             },
             ..Default::default()
