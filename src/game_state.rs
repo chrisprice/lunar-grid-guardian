@@ -1,4 +1,3 @@
-use crate::ConstOne;
 use crate::event_state::EventState;
 use crate::game_variables::GameVariables;
 use crate::system::battery::Battery;
@@ -6,9 +5,10 @@ use crate::system::life_support::LifeSupport;
 use crate::system::operations::Operations;
 use crate::system::reactor::Reactor;
 use crate::system::solar::Solar;
+use crate::system::system::System;
 use crate::tick_context::TickContext;
 use uom::ConstZero;
-use uom::si::f32::{Frequency, Power, Ratio, Time};
+use uom::si::f32::{Frequency, Power, Time};
 use uom::si::frequency::hertz;
 use uom::si::time::second;
 
@@ -25,9 +25,6 @@ pub struct GameState<'a> {
     pub total_grid_supply: Power,
     pub total_grid_demand: Power,
     pub frequency_hz: Frequency,
-
-    // Damage status (0-100%, where 0% is no damage)
-    pub colony_damage: Ratio, // 0-100%
 
     pub comms_online: bool,
     pub operations_online: bool,
@@ -62,7 +59,6 @@ impl<'a> GameState<'a> {
             total_grid_supply: Power::ZERO,
             total_grid_demand: Power::ZERO,
             frequency_hz: game_vars.nominal_frequency,
-            colony_damage: Ratio::ZERO,
             comms_online: true,
             operations_online: true,
             life_support_emergency: false,
@@ -83,11 +79,13 @@ impl<'a> GameState<'a> {
 
     /// Returns true if the game is over, based on colony damage or frequency deviation.
     pub fn is_game_over(&self) -> bool {
-        self.colony_damage >= Ratio::ONE
-            || (self.tick_frequency_hz() - self.game_vars.nominal_frequency)
-                .abs()
-                .get::<hertz>()
-                > 0.5
+        let System::Online { .. } = &self.life_support.system else {
+            return true;
+        };
+        (self.tick_frequency_hz() - self.game_vars.nominal_frequency)
+            .abs()
+            .get::<hertz>()
+            > 0.5
     }
 
     /// Derives the next frequency_hz value based on the swing equation and current state.
