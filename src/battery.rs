@@ -1,4 +1,4 @@
-use crate::generator::GeneratorState;
+use crate::system::SystemState;
 use crate::tick_context::TickContext;
 use uom::ConstZero;
 use uom::si::f32::{Energy, Power};
@@ -19,7 +19,7 @@ pub enum BatteryOperation {
 
 #[derive(Debug, Default)]
 pub struct Battery {
-    pub generator_state: GeneratorState,
+    pub generator_state: SystemState,
     pub charge: Energy,
     pub mode: BatteryMode,
 }
@@ -51,7 +51,7 @@ impl Battery {
             BatteryMode::Charge | BatteryMode::Discharge | BatteryMode::Auto => None,
         };
 
-        let GeneratorState::Online { damage } = self.generator_state else {
+        let SystemState::Online { damage } = self.generator_state else {
             return Power::ZERO;
         };
 
@@ -124,7 +124,7 @@ mod tests {
     fn test_tick_generator_offline() {
         let tick_context = setup_tick_context(10.0, 1.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Offline,
+            generator_state: SystemState::Offline,
             charge: Energy::new::<kilowatt_hour>(5.0),
             mode: BatteryMode::Auto,
         };
@@ -140,7 +140,7 @@ mod tests {
     fn test_tick_charge_mode_with_surplus() {
         let tick_context = setup_tick_context(10.0, 3600.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::default(),
             },
             charge: Energy::new::<kilowatt_hour>(5.0),
@@ -158,7 +158,7 @@ mod tests {
     fn test_tick_charge_mode_reaches_full() {
         let tick_context = setup_tick_context(10.0, 3600.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::default(),
             },
             charge: Energy::new::<kilowatt_hour>(9.5),
@@ -176,7 +176,7 @@ mod tests {
     fn test_tick_charge_mode_already_full() {
         let tick_context = setup_tick_context(10.0, 1.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::default(),
             },
             charge: Energy::new::<kilowatt_hour>(10.0),
@@ -194,7 +194,7 @@ mod tests {
     fn test_tick_charge_mode_with_deficit() {
         let tick_context = setup_tick_context(10.0, 1.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::default(),
             },
             charge: Energy::new::<kilowatt_hour>(5.0),
@@ -212,7 +212,7 @@ mod tests {
     fn test_tick_charge_mode_with_damage() {
         let tick_context = setup_tick_context(10.0, 3600.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::new(Ratio::new::<percent>(50.0)),
             },
             charge: Energy::new::<kilowatt_hour>(2.0),
@@ -230,7 +230,7 @@ mod tests {
     fn test_tick_discharge_mode_with_deficit() {
         let tick_context = setup_tick_context(10.0, 3600.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::default(),
             },
             charge: Energy::new::<kilowatt_hour>(5.0),
@@ -248,7 +248,7 @@ mod tests {
     fn test_tick_discharge_mode_reaches_empty() {
         let tick_context = setup_tick_context(10.0, 3600.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::default(),
             },
             charge: Energy::new::<kilowatt_hour>(0.5),
@@ -266,7 +266,7 @@ mod tests {
     fn test_tick_discharge_mode_already_empty() {
         let tick_context = setup_tick_context(10.0, 1.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::default(),
             },
             charge: Energy::new::<kilowatt_hour>(0.0),
@@ -284,7 +284,7 @@ mod tests {
     fn test_tick_discharge_mode_with_surplus() {
         let tick_context = setup_tick_context(10.0, 1.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::default(),
             },
             charge: Energy::new::<kilowatt_hour>(5.0),
@@ -302,7 +302,7 @@ mod tests {
     fn test_tick_discharge_mode_with_damage() {
         let tick_context = setup_tick_context(10.0, 3600.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::new(Ratio::new::<percent>(50.0)),
             },
             charge: Energy::new::<kilowatt_hour>(6.0),
@@ -320,7 +320,7 @@ mod tests {
     fn test_tick_auto_mode_no_damage_surplus_charges() {
         let tick_context = setup_tick_context(10.0, 3600.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::default(),
             },
             charge: Energy::new::<kilowatt_hour>(5.0),
@@ -338,7 +338,7 @@ mod tests {
     fn test_tick_auto_mode_no_damage_deficit_discharges() {
         let tick_context = setup_tick_context(10.0, 3600.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::default(),
             },
             charge: Energy::new::<kilowatt_hour>(5.0),
@@ -356,7 +356,7 @@ mod tests {
     fn test_tick_auto_mode_no_damage_balanced_no_action() {
         let tick_context = setup_tick_context(10.0, 1.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::default(),
             },
             charge: Energy::new::<kilowatt_hour>(5.0),
@@ -374,7 +374,7 @@ mod tests {
     fn test_tick_auto_mode_with_damage_surplus_charges_less_effectively() {
         let tick_context = setup_tick_context(10.0, 1.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::new(Ratio::new::<percent>(10.0)),
             },
             charge: Energy::new::<kilowatt_hour>(5.0),
@@ -392,7 +392,7 @@ mod tests {
     fn test_tick_auto_mode_with_damage_deficit_discharges_normally() {
         let tick_context = setup_tick_context(10.0, 1.0);
         let mut battery = Battery {
-            generator_state: GeneratorState::Online {
+            generator_state: SystemState::Online {
                 damage: Damage::new(Ratio::new::<percent>(10.0)),
             },
             charge: Energy::new::<kilowatt_hour>(5.0),

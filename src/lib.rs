@@ -6,12 +6,12 @@ pub mod damage;
 pub mod event_state;
 pub mod game_state;
 pub mod game_variables;
-pub mod generator;
 pub mod life_support;
 pub mod lunar_phase;
 pub mod operations;
 pub mod reactor;
 pub mod solar;
+pub mod system;
 pub mod tick_context;
 
 trait ConstOne {
