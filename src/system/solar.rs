@@ -3,7 +3,7 @@ use crate::lunar_phase::LunarPhase;
 use crate::tick_context::TickContext;
 use std::f32::consts::PI;
 use uom::ConstZero;
-use uom::si::f32::Power;
+use uom::si::f32::{Power, Ratio};
 use uom::si::ratio::ratio;
 
 #[derive(Debug, Default)]
@@ -32,6 +32,19 @@ impl Solar {
                 damage.apply(current_potential_power)
             }
             LunarPhase::Day { .. } | LunarPhase::Night { .. } => Power::ZERO,
+        }
+    }
+
+    /// Activates or deactivates the solar shields.
+    pub fn set_shields_active(&mut self, active: bool) {
+        self.shields_active = active;
+    }
+
+    /// Apply damage to the solar generator.
+    /// If shields are active, damage is not applied.
+    pub fn damage(&mut self, amount: Ratio) {
+        if !self.shields_active {
+            self.generator.damage(amount);
         }
     }
 }

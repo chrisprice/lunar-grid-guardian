@@ -123,10 +123,18 @@ impl<'a> GameState<'a> {
             tick_delta: self.mission_time - self.last_tick_time,
         };
 
-        // Event state ticks
-        self.micrometeorite_event.tick(context);
-        self.lunar_quake_event.tick(context);
-        self.solar_flare_event.tick(context);
+        // Handle events
+        if self.micrometeorite_event.tick(context) {
+            self.solar.damage(self.game_vars.micrometeorite_damage_solar);
+        }
+        if self.lunar_quake_event.tick(context) {
+            self.battery.generator.damage(self.game_vars.lunar_quake_damage_battery);
+            self.reactor.generator.damage(self.game_vars.lunar_quake_damage_reactor);
+        }
+        if self.solar_flare_event.tick(context) {
+            self.battery.generator.damage(self.game_vars.solar_flare_spike_damage_battery);
+            self.solar.damage(self.game_vars.solar_flare_damage_solar_array);
+        }
 
         // Demand side
         let operations_result = self.operations.tick(context);
@@ -150,7 +158,7 @@ impl<'a> GameState<'a> {
 
         self.total_grid_supply = solar_power + reactor_output;
 
-        // Battery tick
+        // Battery
         // Calculate power imbalance before battery acts
         let power_imbalance = self.total_grid_supply - self.total_grid_demand;
         let power_consumed_by_battery = self.battery.tick(context, power_imbalance);
