@@ -1,4 +1,5 @@
 use crate::ConstOne;
+use crate::game_variables::GameVariables;
 use crate::system::system::System;
 use crate::tick_context::TickContext;
 use uom::ConstZero;
@@ -69,6 +70,10 @@ impl Reactor {
             .max(Energy::ZERO);
 
         self.power_output
+    }
+
+    pub fn boost(&mut self, game_vars: &GameVariables) {
+        self.coolant_energy_absorption_capacity += game_vars.boost_coolant_energy_capacity;
     }
 }
 
@@ -154,7 +159,9 @@ mod tests {
     fn test_set_target_power_output_online_generator() {
         let tick_context = setup_test_environment(1.0, 100.0, 10.0);
         let mut reactor = Reactor {
-            generator: System::Online { damage: Damage::default() },
+            generator: SystemState::Online {
+                damage: Damage::default(),
+            },
             ..Default::default()
         };
         reactor.set_target_power_output(Power::new::<kilowatt>(75.0), tick_context.game_vars);

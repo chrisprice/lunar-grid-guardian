@@ -66,7 +66,7 @@ pub struct GameVariables {
     /// Supply Drop - Docking Duration (seconds)
     pub supply_drop_docking_duration: Time,
     pub boost_life_support_amount: Ratio,
-    pub boost_battery_amount: Ratio,
+    pub boost_battery_amount: Energy,
     pub boost_coolant_energy_capacity: Energy,
     pub boost_repair_amount: Ratio,
 }
@@ -103,7 +103,7 @@ impl Default for GameVariables {
             supply_drop_interval: Time::new::<second>(60.0),
             supply_drop_docking_duration: Time::new::<second>(10.0),
             boost_life_support_amount: Ratio::new::<percent>(25.0),
-            boost_battery_amount: Ratio::new::<percent>(25.0),
+            boost_battery_amount: Energy::new::<kilowatt_hour>(50.0),
             boost_coolant_energy_capacity: Energy::new::<kilowatt_hour>(10.0),
             boost_repair_amount: Ratio::new::<percent>(50.0),
         }

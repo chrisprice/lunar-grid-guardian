@@ -130,7 +130,14 @@ impl<'a> GameState<'a> {
         // Demand side
         let operations_result = self.operations.tick(context);
         if operations_result.docking_completed {
-            todo!("Award docking bonus");
+            let random_boost_type = self.mission_time.get::<second>() as u32 % 4;
+            match random_boost_type {
+                0 => self.boost_life_support += 1,
+                1 => self.boost_battery += 1,
+                2 => self.boost_coolant += 1,
+                3 => self.boost_repair += 1,
+                _ => panic!("Unexpected random boost type"),
+            }
         }
 
         self.total_grid_demand = operations_result.power_consumed;
@@ -155,5 +162,34 @@ impl<'a> GameState<'a> {
         self.frequency_hz = self.tick_frequency_hz();
 
         self.last_tick_time = self.mission_time;
+    }
+
+    pub fn use_life_support_boost(&mut self) {
+        if self.boost_life_support > 0 {
+            self.boost_life_support -= 1;
+            todo!( "Implement life support boost logic");
+            // self.life_support.boost(self.game_vars);
+        }
+    }
+    
+    pub fn use_battery_boost(&mut self) {
+        if self.boost_battery > 0 {
+            self.boost_battery -= 1;
+            self.battery.boost(self.game_vars);
+        }
+    }
+
+    pub fn use_coolant_boost(&mut self) {
+        if self.boost_coolant > 0 {
+            self.boost_coolant -= 1;
+            self.reactor.boost(self.game_vars);
+        }
+    }
+
+    pub fn use_repair_boost(&mut self) {
+        if self.boost_repair > 0 {
+            self.boost_repair -= 1;
+            todo!( "Implement repair boost logic");
+        }
     }
 }
