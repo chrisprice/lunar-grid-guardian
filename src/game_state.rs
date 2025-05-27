@@ -1,6 +1,7 @@
 use crate::event_state::EventState;
 use crate::game_variables::GameVariables;
 use crate::system::battery::Battery;
+use crate::system::communications::Communications;
 use crate::system::life_support::LifeSupport;
 use crate::system::operations::Operations;
 use crate::system::reactor::Reactor;
@@ -30,24 +31,26 @@ pub struct GameState<'a> {
     pub operations_online: bool,
     pub life_support_emergency: bool,
 
+    // Supply
     pub solar: Solar,
     pub battery: Battery,
     pub reactor: Reactor,
-    pub life_support: LifeSupport,
 
-    // Operations/boosts
+    // Demand
+    pub life_support: LifeSupport,
+    pub operations: Operations,
+    pub comms: Communications,
+
+    // Boosts
     pub boost_life_support: u32,
     pub boost_battery: u32,
     pub boost_coolant: u32,
     pub boost_repair: u32,
 
-    // Event states
+    // Events
     pub micrometeorite_event: EventState,
     pub lunar_quake_event: EventState,
     pub solar_flare_event: EventState,
-
-    // Operations state
-    pub operations: Operations,
 }
 
 impl<'a> GameState<'a> {
@@ -74,6 +77,7 @@ impl<'a> GameState<'a> {
             lunar_quake_event: EventState::Dormant,
             solar_flare_event: EventState::Dormant,
             operations: Operations::default(),
+            comms: Communications::default(),
         }
     }
 
@@ -123,47 +127,48 @@ impl<'a> GameState<'a> {
             tick_delta: self.mission_time - self.last_tick_time,
         };
 
-        // Handle events
         if self.micrometeorite_event.tick(context) {
-            self.solar.damage(self.game_vars.micrometeorite_damage_solar);
+            self.solar
+                .damage(self.game_vars.micrometeorite_damage_solar);
         }
         if self.lunar_quake_event.tick(context) {
-            self.battery.generator.damage(self.game_vars.lunar_quake_damage_battery);
-            self.reactor.generator.damage(self.game_vars.lunar_quake_damage_reactor);
+            self.battery
+                .generator
+                .damage(self.game_vars.lunar_quake_damage_battery);
+            self.reactor
+                .generator
+                .damage(self.game_vars.lunar_quake_damage_reactor);
         }
         if self.solar_flare_event.tick(context) {
-            self.battery.generator.damage(self.game_vars.solar_flare_spike_damage_battery);
-            self.solar.damage(self.game_vars.solar_flare_damage_solar_array);
+            self.battery
+                .generator
+                .damage(self.game_vars.solar_flare_spike_damage_battery);
+            self.solar
+                .damage(self.game_vars.solar_flare_damage_solar_array);
         }
 
-        // Demand side
-        let operations_result = self.operations.tick(context);
-        if operations_result.docking_completed {
-            let random_boost_type = self.mission_time.get::<second>() as u32 % 4;
-            match random_boost_type {
-                0 => self.boost_life_support += 1,
-                1 => self.boost_battery += 1,
-                2 => self.boost_coolant += 1,
-                3 => self.boost_repair += 1,
-                _ => panic!("Unexpected random boost type"),
+        self.total_grid_demand = {
+            let comms_power_demand = self.comms.tick(context);
+            let life_support_power_demand = self.life_support.tick(context);
+
+            let operations_result = self.operations.tick(context);
+            if operations_result.docking_completed {
+                self.increment_random_boost();
             }
-        }
 
-        let life_support_power_demand = self.life_support.tick(context);
-        self.total_grid_demand = operations_result.power_consumed + life_support_power_demand;
+            operations_result.power_consumed + life_support_power_demand + comms_power_demand
+        };
 
-        // Supply side
-        let solar_power = self.solar.tick(context);
-        let reactor_output = self.reactor.tick(context);
+        self.total_grid_supply = {
+            let solar_power = self.solar.tick(context);
+            let reactor_output = self.reactor.tick(context);
 
-        self.total_grid_supply = solar_power + reactor_output;
+            solar_power + reactor_output
+        };
 
         // Battery
-        // Calculate power imbalance before battery acts
         let power_imbalance = self.total_grid_supply - self.total_grid_demand;
         let power_consumed_by_battery = self.battery.tick(context, power_imbalance);
-        // If battery consumes power (charges), it increases demand.
-        // If battery supplies power (discharges), it increases supply.
         if power_consumed_by_battery.value > 0.0 {
             self.total_grid_demand += power_consumed_by_battery;
         } else if power_consumed_by_battery.value < 0.0 {
@@ -174,6 +179,17 @@ impl<'a> GameState<'a> {
         self.last_tick_time = self.mission_time;
     }
 
+    fn increment_random_boost(&mut self) {
+        let random_boost_type = self.mission_time.get::<second>() as u32 % 4;
+        match random_boost_type {
+            0 => self.boost_life_support += 1,
+            1 => self.boost_battery += 1,
+            2 => self.boost_coolant += 1,
+            3 => self.boost_repair += 1,
+            _ => panic!("Unexpected random boost type"),
+        }
+    }
+    
     pub fn use_life_support_boost(&mut self) {
         if self.boost_life_support > 0 {
             self.boost_life_support -= 1;
