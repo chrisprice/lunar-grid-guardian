@@ -1,4 +1,4 @@
-use crate::system::SystemState;
+use crate::system::state::SystemState;
 use crate::lunar_phase::LunarPhase;
 use crate::tick_context::TickContext;
 use std::f32::consts::PI;
@@ -41,7 +41,7 @@ mod tests {
     use super::*;
     use crate::damage::Damage;
     use crate::game_variables::GameVariables;
-    use crate::system::SystemState;
+    use crate::system::state::SystemState;
     use crate::lunar_phase::LUNAR_PHASE_DURATION;
     use crate::tick_context::TickContext;
     use std::f32::consts::PI;

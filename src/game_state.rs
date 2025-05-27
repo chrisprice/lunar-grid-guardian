@@ -1,9 +1,9 @@
-use crate::battery::Battery;
+use crate::system::battery::Battery;
 use crate::event_state::EventState;
 use crate::game_variables::GameVariables;
-use crate::operations::OperationsState;
-use crate::reactor::Reactor;
-use crate::solar::SolarState;
+use crate::system::operations::OperationsState;
+use crate::system::reactor::Reactor;
+use crate::system::solar::SolarState;
 use crate::tick_context::TickContext;
 use crate::ConstOne;
 use uom::si::f32::{Frequency, Power, Ratio, Time};
