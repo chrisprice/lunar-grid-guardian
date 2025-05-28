@@ -3,7 +3,7 @@ use uom::si::f32::{Power, Time};
 use uom::si::time::{day, second};
 
 use crate::game_variables::GameVariables;
-use crate::system::system::System;
+use crate::system::state::State;
 use crate::tick_context::TickContext;
 
 /// Represents the state of the life support system.
@@ -11,7 +11,7 @@ use crate::tick_context::TickContext;
 #[derive(Debug, Default)]
 pub struct LifeSupport {
     /// Current system state (online, offline, repairing).
-    pub system: System,
+    pub system: State,
     /// Indicates if life support is operating in emergency restrictions mode.
     pub emergency_restrictions_active: bool,
 }
@@ -35,7 +35,7 @@ impl LifeSupport {
             );
             Power::ZERO
         } else {
-            if let System::Online { .. } = &mut self.system {
+            if let State::Online { .. } = &mut self.system {
                 self.system.repair(context.mission_time, context.game_vars);
             }
 
@@ -46,7 +46,7 @@ impl LifeSupport {
     }
 
     pub fn boost(&mut self, game_vars: &GameVariables) {
-        if let System::Online { damage } = &mut self.system {
+        if let State::Online { damage } = &mut self.system {
             damage.repair(game_vars.boost_life_support_amount);
         }
     }
@@ -66,7 +66,7 @@ mod tests {
     #[test]
     fn test_life_support_initial_state() {
         let life_support = LifeSupport::default();
-        let System::Online { damage } = life_support.system else {
+        let State::Online { damage } = life_support.system else {
             panic!("Expected System::Online");
         };
         assert_quantities_eq(damage.inner(), 0.0);
@@ -120,7 +120,7 @@ mod tests {
         let power_demand = life_support.tick(&context);
 
         assert_quantities_eq(power_demand, 0.0);
-        if let System::Online { damage } = life_support.system {
+        if let State::Online { damage } = life_support.system {
             assert_quantities_eq(damage.inner(), 0.001);
         } else {
             panic!("Expected System::Online");
@@ -135,7 +135,7 @@ mod tests {
             ..Default::default()
         };
         let mut life_support = LifeSupport {
-            system: System::Online {
+            system: State::Online {
                 damage: Damage::new(Ratio::new::<percent>(10.0)),
             },
             emergency_restrictions_active: false,
@@ -146,7 +146,7 @@ mod tests {
         let context = TickContext::new_static(&game_vars, 0.0, 1.0);
         life_support.tick(&context);
 
-        if let System::Online { damage, .. } = life_support.system {
+        if let State::Online { damage, .. } = life_support.system {
             assert_quantities_eq(damage.inner(), 0.101);
         } else {
             panic!("Expected System::Online");

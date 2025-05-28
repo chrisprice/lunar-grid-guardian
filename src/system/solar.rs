@@ -1,5 +1,5 @@
-use crate::system::system::System;
 use crate::lunar_phase::LunarPhase;
+use crate::system::state::State;
 use crate::tick_context::TickContext;
 use std::f32::consts::PI;
 use uom::ConstZero;
@@ -8,7 +8,7 @@ use uom::si::ratio::ratio;
 
 #[derive(Debug, Default)]
 pub struct Solar {
-    pub generator: System,
+    pub generator: State,
     pub shields_active: bool,
 }
 
@@ -18,7 +18,7 @@ impl Solar {
     pub fn tick(&mut self, context: &TickContext) -> Power {
         self.generator.tick(context);
 
-        let System::Online { damage } = self.generator else {
+        let State::Online { damage } = self.generator else {
             return Power::ZERO;
         };
 
@@ -54,8 +54,8 @@ mod tests {
     use super::*;
     use crate::damage::Damage;
     use crate::game_variables::GameVariables;
-    use crate::system::system::System;
     use crate::lunar_phase::LUNAR_PHASE_DURATION;
+    use crate::system::state::State;
     use crate::tick_context::TickContext;
     use std::f32::consts::PI;
     use uom::si::f32::{Power, Ratio, Time};
@@ -65,7 +65,7 @@ mod tests {
 
     fn solar_online(damage_value: f32, shields_active: bool) -> Solar {
         Solar {
-            generator: System::Online {
+            generator: State::Online {
                 damage: Damage::new(Ratio::new::<ratio>(damage_value)),
             },
             shields_active,
@@ -102,10 +102,10 @@ mod tests {
         gv
     }
 
-    fn create_day_tick_context<'a>(
-        game_vars: &'a GameVariables,
+    fn create_day_tick_context(
+        game_vars: &GameVariables,
         elapsed_ratio_target: f32,
-    ) -> TickContext<'a> {
+    ) -> TickContext<'_> {
         let lunar_elapsed_target_secs = elapsed_ratio_target * LUNAR_PHASE_DURATION.value;
         let mission_time_secs =
             lunar_elapsed_target_secs * game_vars.mission_time_per_lunar_time.get::<ratio>();
@@ -117,10 +117,10 @@ mod tests {
         }
     }
 
-    fn create_night_tick_context<'a>(
-        game_vars: &'a GameVariables,
+    fn create_night_tick_context(
+        game_vars: &GameVariables,
         elapsed_ratio_in_night_target: f32,
-    ) -> TickContext<'a> {
+    ) -> TickContext<'_> {
         let lunar_time_into_night_phase_secs =
             elapsed_ratio_in_night_target * LUNAR_PHASE_DURATION.value;
         let total_lunar_elapsed_secs =
@@ -222,7 +222,7 @@ mod tests {
         let game_vars = default_game_vars(NOMINAL_SOLAR_OUTPUT, MISSION_TIME_PER_LUNAR_TIME_RATIO);
         let context = create_day_tick_context(&game_vars, 0.5);
         let mut solar = Solar {
-            generator: System::Offline,
+            generator: State::Offline,
             shields_active: false,
         };
         let power = solar.tick(&context);

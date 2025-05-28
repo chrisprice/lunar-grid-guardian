@@ -1,6 +1,7 @@
 use std::ops::Mul;
 use uom::{
-    si::{f32::Ratio, Dimension, Quantity, SI}, ConstZero,
+    ConstZero,
+    si::{Dimension, Quantity, SI, f32::Ratio},
 };
 
 use crate::ConstOne;

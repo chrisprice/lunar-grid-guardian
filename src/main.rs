@@ -1,15 +1,19 @@
 use crossterm::{
     event::{self, Event, KeyCode},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{
+    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     widgets::{Block, Borders, Paragraph},
-    Frame, Terminal,
 };
-use std::{error::Error, io, time::{Duration, Instant}};
+use std::{
+    error::Error,
+    io,
+    time::{Duration, Instant},
+};
 
 use lunar_grid_guardian::game_state::GameState;
 use lunar_grid_guardian::game_variables::GameVariables;
@@ -19,7 +23,7 @@ struct App<'a> {
     game_state: GameState<'a>,
 }
 
-impl <'a> App<'a> {
+impl<'a> App<'a> {
     fn new(game_vars: &'a GameVariables) -> Self {
         App {
             last_tick: Instant::now(),
@@ -40,10 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let res = run_app(&mut terminal, &mut app);
 
     disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen
-    )?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
 
     if let Err(err) = res {
@@ -53,7 +54,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
+fn run_app<B: ratatui::backend::Backend>(
+    terminal: &mut Terminal<B>,
+    app: &mut App,
+) -> io::Result<()> {
     loop {
         let tick_rate = Duration::from_secs(1);
         if app.last_tick.elapsed() >= tick_rate {
@@ -69,7 +73,6 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut A
                 }
             }
         }
-        
     }
 }
 
@@ -82,8 +85,10 @@ fn ui(f: &mut Frame, app: &App) {
 
     let mission_time_seconds = app.game_state.mission_time.get::<uom::si::time::second>();
     let timer_text = format!("Mission Time: {:.0}s", mission_time_seconds);
-    let timer_paragraph = Paragraph::new(timer_text)
-        .block(Block::default().title("Mission Timer").borders(Borders::ALL));
+    let timer_paragraph = Paragraph::new(timer_text).block(
+        Block::default()
+            .title("Mission Timer")
+            .borders(Borders::ALL),
+    );
     f.render_widget(timer_paragraph, chunks[0]);
 }
-

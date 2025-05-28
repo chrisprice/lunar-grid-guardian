@@ -1,6 +1,6 @@
+use crate::game_variables::GameVariables;
 use uom::si::f32::Time;
 use uom::si::time::second;
-use crate::game_variables::GameVariables;
 
 pub struct TickContext<'a> {
     pub game_vars: &'a GameVariables,
@@ -9,11 +9,7 @@ pub struct TickContext<'a> {
 }
 
 impl<'a> TickContext<'a> {
-    pub fn new(
-        game_vars: &'a GameVariables,
-        mission_time_s: f32,
-        tick_delta_s: f32,
-    ) -> Self {
+    pub fn new(game_vars: &'a GameVariables, mission_time_s: f32, tick_delta_s: f32) -> Self {
         Self {
             game_vars,
             mission_time: Time::new::<second>(mission_time_s),
