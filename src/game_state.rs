@@ -6,7 +6,6 @@ use crate::system::life_support::LifeSupport;
 use crate::system::operations::Operations;
 use crate::system::reactor::Reactor;
 use crate::system::solar::Solar;
-use crate::system::state::State;
 use crate::tick_context::TickContext;
 use uom::ConstZero;
 use uom::si::f32::{Frequency, Power, Time};
@@ -76,7 +75,7 @@ impl<'a> GameState<'a> {
 
     /// Returns true if the game is over, based on colony damage or frequency deviation.
     pub fn is_game_over(&self) -> bool {
-        let State::Online { .. } = &self.life_support.system else {
+        if self.life_support.colony_damage().is_offline() {
             return true;
         };
         (self.tick_frequency_hz() - self.game_vars.nominal_frequency)

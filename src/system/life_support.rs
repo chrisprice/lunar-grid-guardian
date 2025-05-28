@@ -2,41 +2,40 @@ use uom::ConstZero;
 use uom::si::f32::{Power, Time};
 use uom::si::time::{day, second};
 
+use crate::damage::Damage;
 use crate::game_variables::GameVariables;
-use crate::system::state::State;
 use crate::tick_context::TickContext;
 
 /// Represents the state of the life support system.
 /// Manages colony damage and calculates power consumption.
 #[derive(Debug, Default)]
 pub struct LifeSupport {
-    /// Current system state (online, offline, repairing).
-    pub system: State,
-    /// Indicates if life support is operating in emergency restrictions mode.
-    pub emergency_restrictions_active: bool,
+    colony_damage: Damage,
+    emergency_restrictions: bool,
 }
 
 impl LifeSupport {
     /// Activates or deactivates the emergency restrictions mode for life support.
     pub fn set_emergency_restrictions(&mut self, active: bool) {
-        self.emergency_restrictions_active = active;
+        self.emergency_restrictions = active;
     }
 
     /// Processes a time step for the life support system.
     ///
     /// Returns the calculated power demand for the current tick.
     pub fn tick(&mut self, context: &TickContext) -> Power {
-        self.system.tick(context);
-
-        if self.emergency_restrictions_active {
-            self.system.damage(
+        if self.emergency_restrictions {
+            self.colony_damage.damage(
                 context.game_vars.colony_damage_rate_emergency / Time::new::<second>(1.0)
                     * context.tick_delta,
             );
             Power::ZERO
         } else {
-            if let State::Online { .. } = &self.system {
-                self.system.repair(context.mission_time, context.game_vars);
+            if !self.colony_damage.is_offline() {
+                self.colony_damage.repair(
+                    context.game_vars.colony_damage_repair_rate / Time::new::<second>(1.0)
+                        * context.tick_delta,
+                );
             }
 
             context.game_vars.life_support_base_power_demand
@@ -46,9 +45,14 @@ impl LifeSupport {
     }
 
     pub fn boost(&mut self, game_vars: &GameVariables) {
-        if let State::Online { damage } = &mut self.system {
-            damage.repair(game_vars.boost_life_support_amount);
+        if !self.colony_damage.is_offline() {
+            self.colony_damage
+                .repair(game_vars.boost_life_support_amount);
         }
+    }
+
+    pub fn colony_damage(&self) -> &Damage {
+        &self.colony_damage
     }
 }
 
@@ -66,10 +70,7 @@ mod tests {
     #[test]
     fn test_life_support_initial_state() {
         let life_support = LifeSupport::default();
-        let State::Online { damage } = life_support.system else {
-            panic!("Expected System::Online");
-        };
-        assert_quantities_eq(damage.inner(), 0.0);
+        assert_quantities_eq(life_support.colony_damage.inner(), 0.0);
     }
 
     #[test]
@@ -120,11 +121,7 @@ mod tests {
         let power_demand = life_support.tick(&context);
 
         assert_quantities_eq(power_demand, 0.0);
-        if let State::Online { damage } = life_support.system {
-            assert_quantities_eq(damage.inner(), 0.001);
-        } else {
-            panic!("Expected System::Online");
-        }
+        assert_quantities_eq(life_support.colony_damage.inner(), 0.001);
     }
 
     #[test]
@@ -135,10 +132,8 @@ mod tests {
             ..Default::default()
         };
         let mut life_support = LifeSupport {
-            system: State::Online {
-                damage: Damage::new(Ratio::new::<percent>(10.0)),
-            },
-            emergency_restrictions_active: false,
+            colony_damage: Damage::new(Ratio::new::<percent>(10.0)),
+            emergency_restrictions: false,
         };
 
         life_support.set_emergency_restrictions(true);
@@ -146,10 +141,6 @@ mod tests {
         let context = TickContext::new_static(&game_vars, 0.0, 1.0);
         life_support.tick(&context);
 
-        if let State::Online { damage, .. } = life_support.system {
-            assert_quantities_eq(damage.inner(), 0.101);
-        } else {
-            panic!("Expected System::Online");
-        }
+        assert_quantities_eq(life_support.colony_damage.inner(), 0.101);
     }
 }

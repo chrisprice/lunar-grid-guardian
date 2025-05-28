@@ -38,8 +38,10 @@ pub struct GameVariables {
     pub reactor_thermal_efficiency_factor: Ratio,
     /// Reactor Critical Thermal Energy (e.g., kWh)
     pub reactor_critical_thermal_energy: Energy,
-    /// Life Support - Colony Damage Increase Rate (Emergency) (percentage points per second)
+    /// Life Support - Colony Damage Increase Rate (per second)
     pub colony_damage_rate_emergency: Ratio,
+    /// Life Support - Colony Damage Repair Rate (per second)
+    pub colony_damage_repair_rate: Ratio,
     /// Life Support - Base Power Demand (Power units)
     pub life_support_base_power_demand: Power,
     /// Life Support - Power Demand Increase Rate (ticks once per day))
@@ -98,6 +100,7 @@ impl Default for GameVariables {
             reactor_thermal_efficiency_factor: Ratio::new::<percent>(80.0),
             reactor_critical_thermal_energy: Energy::new::<kilowatt_hour>(100.0),
             colony_damage_rate_emergency: Ratio::new::<percent>(0.5),
+            colony_damage_repair_rate: Ratio::new::<percent>(0.1),
             life_support_base_power_demand: Power::new::<watt>(100.0),
             life_support_power_demand_increase: Power::new::<watt>(5.0) / Time::new::<day>(1.0),
             comms_power_demand: Power::new::<watt>(20.0),
