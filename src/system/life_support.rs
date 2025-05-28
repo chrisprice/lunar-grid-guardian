@@ -35,7 +35,7 @@ impl LifeSupport {
             );
             Power::ZERO
         } else {
-            if let State::Online { .. } = &mut self.system {
+            if let State::Online { .. } = &self.system {
                 self.system.repair(context.mission_time, context.game_vars);
             }
 

@@ -4,7 +4,7 @@ use crate::tick_context::TickContext;
 use uom::ConstZero;
 use uom::si::f32::{Energy, Power};
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum BatteryMode {
     #[default]
     Auto,
@@ -12,7 +12,7 @@ pub enum BatteryMode {
     Discharge,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy)]
 pub enum BatteryOperation {
     Charge,
     Discharge,
@@ -52,7 +52,7 @@ impl Battery {
             _ => None,
         };
 
-        let State::Online { damage } = self.generator else {
+        let State::Online { damage } = &self.generator else {
             return Power::ZERO;
         };
 
@@ -74,7 +74,7 @@ impl Battery {
     }
 
     pub fn boost(&mut self, game_vars: &GameVariables) {
-        if let State::Online { damage } = self.generator {
+        if let State::Online { damage } = &self.generator {
             let effective_capacity: Energy = damage.apply(game_vars.battery_capacity);
             let remaining_capacity: Energy = effective_capacity - self.charge;
             self.charge += remaining_capacity.min(game_vars.boost_battery_amount);

@@ -18,7 +18,7 @@ impl Solar {
     pub fn tick(&mut self, context: &TickContext) -> Power {
         self.generator.tick(context);
 
-        let State::Online { damage } = self.generator else {
+        let State::Online { damage } = &self.generator else {
             return Power::ZERO;
         };
 

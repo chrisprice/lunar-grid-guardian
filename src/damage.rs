@@ -6,7 +6,7 @@ use uom::{
 
 use crate::ConstOne;
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Default)]
 pub struct Damage {
     value: Ratio,
 }

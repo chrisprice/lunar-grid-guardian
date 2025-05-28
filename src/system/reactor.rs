@@ -28,7 +28,7 @@ impl Reactor {
         self.generator.tick(context);
 
         let ramp_amount = context.game_vars.reactor_power_ramp_rate * context.tick_delta;
-        self.power_output = match self.generator {
+        self.power_output = match &self.generator {
             State::Online { damage } => {
                 let mut power_output = self.power_output;
 

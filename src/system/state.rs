@@ -4,7 +4,7 @@ use crate::tick_context::TickContext;
 use uom::si::f32::Ratio;
 use uom::si::f32::Time;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug)]
 pub enum State {
     Online { damage: Damage },
     Offline,
@@ -21,7 +21,7 @@ impl Default for State {
 
 impl State {
     pub fn repair(self, current_mission_time: Time, game_vars: &GameVariables) -> Self {
-        match self {
+        match &self {
             Self::Repairing { .. } => self,
             Self::Online { damage } if damage.is_undamaged() => self,
             Self::Online { damage } => Self::Repairing {
