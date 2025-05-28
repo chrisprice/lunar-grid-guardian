@@ -82,56 +82,12 @@ mod tests {
     use super::*;
     use crate::damage::Damage;
     use crate::game_variables::GameVariables;
+    use crate::test::assert_quantities_eq;
     use crate::tick_context::TickContext;
-    use uom::si::f32::{Power, PowerRate, Ratio, ThermodynamicTemperature, Time};
+    use uom::si::f32::{Power, PowerRate, Time};
     use uom::si::power::kilowatt;
     use uom::si::power_rate::kilowatt_per_second;
-    use uom::si::ratio::percent;
-    use uom::si::thermodynamic_temperature::degree_celsius;
     use uom::si::time::second;
-
-    const EPSILON: f32 = 1e-1;
-
-    fn assert_power_eq(actual_power: Power, expected_power_kw: f32, message: &str) {
-        let expected = Power::new::<kilowatt>(expected_power_kw);
-        assert!(
-            (actual_power.get::<kilowatt>() - expected.get::<kilowatt>()).abs() < EPSILON,
-            "{}: Expected {} kW, got {} kW. Diff: {} kW",
-            message,
-            expected_power_kw,
-            actual_power.get::<kilowatt>(),
-            (actual_power - expected).abs().get::<kilowatt>()
-        );
-    }
-
-    #[allow(dead_code)]
-    fn assert_temperature_eq(
-        actual_temp: ThermodynamicTemperature,
-        expected_temp_c: f32,
-        message: &str,
-    ) {
-        let expected = ThermodynamicTemperature::new::<degree_celsius>(expected_temp_c);
-        assert!(
-            (actual_temp.get::<degree_celsius>() - expected.get::<degree_celsius>()).abs()
-                < EPSILON,
-            "{}: Expected {} °C, got {} °C",
-            message,
-            expected_temp_c,
-            actual_temp.get::<degree_celsius>()
-        );
-    }
-
-    #[allow(dead_code)]
-    fn assert_ratio_eq(actual_ratio: Ratio, expected_ratio_percent: f32, message: &str) {
-        let expected = Ratio::new::<percent>(expected_ratio_percent);
-        assert!(
-            (actual_ratio.get::<percent>() - expected.get::<percent>()).abs() < EPSILON,
-            "{}: Expected {} %, got {} %",
-            message,
-            expected_ratio_percent,
-            actual_ratio.get::<percent>()
-        );
-    }
 
     fn setup_test_environment(
         tick_delta_s: f32,
@@ -165,25 +121,13 @@ mod tests {
             ..Default::default()
         };
         reactor.set_target_power_output(Power::new::<kilowatt>(75.0), tick_context.game_vars);
-        assert_power_eq(
-            reactor.target_power_output,
-            75.0,
-            "Target power set within limits",
-        );
+        assert_quantities_eq(reactor.target_power_output, 75_000.0);
 
         reactor.set_target_power_output(Power::new::<kilowatt>(120.0), tick_context.game_vars);
-        assert_power_eq(
-            reactor.target_power_output,
-            100.0,
-            "Target power capped by nominal_output",
-        );
+        assert_quantities_eq(reactor.target_power_output, 100_000.0);
 
         reactor.set_target_power_output(Power::new::<kilowatt>(-10.0), tick_context.game_vars);
-        assert_power_eq(
-            reactor.target_power_output,
-            0.0,
-            "Target power floored at zero",
-        );
+        assert_quantities_eq(reactor.target_power_output, 0.0);
     }
 
     #[test]
@@ -195,11 +139,7 @@ mod tests {
             ..Default::default()
         };
         reactor.set_target_power_output(Power::new::<kilowatt>(75.0), tick_context.game_vars);
-        assert_power_eq(
-            reactor.target_power_output,
-            75.0,
-            "Target power can be set even if generator offline",
-        );
+        assert_quantities_eq(reactor.target_power_output, 75_000.0);
     }
 
     #[test]
@@ -213,11 +153,7 @@ mod tests {
             ..Default::default()
         };
         reactor.set_target_power_output(Power::new::<kilowatt>(75.0), tick_context.game_vars);
-        assert_power_eq(
-            reactor.target_power_output,
-            75.0,
-            "Target power should be set even if generator repairing",
-        );
+        assert_quantities_eq(reactor.target_power_output, 75_000.0);
     }
 
     #[test]
@@ -231,22 +167,14 @@ mod tests {
         };
 
         let power_supplied_tick1 = reactor.tick(&tick_context);
-        assert_power_eq(
-            power_supplied_tick1,
-            40.0,
-            "Power supplied tick 1 (ramping down due to Offline state)",
-        );
-        assert_power_eq(reactor.power_output, 40.0, "Reactor power output tick 1");
+        assert_quantities_eq(power_supplied_tick1, 40_000.0);
+        assert_quantities_eq(reactor.power_output, 40_000.0);
 
         for _ in 0..4 {
             reactor.tick(&tick_context);
         }
         let power_supplied_tick5 = reactor.tick(&tick_context);
-        assert_power_eq(
-            power_supplied_tick5,
-            0.0,
-            "Power supplied tick 5 (should be zero)",
-        );
+        assert_quantities_eq(power_supplied_tick5, 0.0);
     }
 
     #[test]
@@ -263,27 +191,15 @@ mod tests {
 
         tick_context.mission_time = Time::new::<second>(1.0);
         let _ = reactor.tick(&tick_context);
-        assert_power_eq(
-            reactor.power_output,
-            20.0,
-            "Repairing state ramp down tick 1",
-        );
+        assert_quantities_eq(reactor.power_output, 20_000.0);
 
         tick_context.mission_time = Time::new::<second>(2.0);
         let _ = reactor.tick(&tick_context);
-        assert_power_eq(
-            reactor.power_output,
-            10.0,
-            "Repairing state ramp down tick 2",
-        );
+        assert_quantities_eq(reactor.power_output, 10_000.0);
 
         tick_context.mission_time = Time::new::<second>(3.0);
         let _ = reactor.tick(&tick_context);
-        assert_power_eq(
-            reactor.power_output,
-            0.0,
-            "Repairing state ramp down tick 3",
-        );
+        assert_quantities_eq(reactor.power_output, 0.0);
     }
 
     #[test]
@@ -299,19 +215,15 @@ mod tests {
         reactor.set_target_power_output(Power::new::<kilowatt>(70.0), tick_context.game_vars);
 
         reactor.tick(&tick_context);
-        assert_power_eq(reactor.power_output, 40.0, "Ramp up tick 1");
+        assert_quantities_eq(reactor.power_output, 40_000.0);
         reactor.tick(&tick_context);
-        assert_power_eq(reactor.power_output, 50.0, "Ramp up tick 2");
+        assert_quantities_eq(reactor.power_output, 50_000.0);
         reactor.tick(&tick_context);
-        assert_power_eq(reactor.power_output, 60.0, "Ramp up tick 3");
+        assert_quantities_eq(reactor.power_output, 60_000.0);
         reactor.tick(&tick_context);
-        assert_power_eq(
-            reactor.power_output,
-            70.0,
-            "Ramp up tick 4 (reached target)",
-        );
+        assert_quantities_eq(reactor.power_output, 70_000.0);
         reactor.tick(&tick_context);
-        assert_power_eq(reactor.power_output, 70.0, "Ramp up tick 5 (at target)");
+        assert_quantities_eq(reactor.power_output, 70_000.0);
     }
 
     #[test]
@@ -327,42 +239,34 @@ mod tests {
         reactor.set_target_power_output(Power::new::<kilowatt>(50.0), tick_context.game_vars);
 
         reactor.tick(&tick_context);
-        assert_power_eq(reactor.power_output, 70.0, "Ramp down tick 1");
+        assert_quantities_eq(reactor.power_output, 70_000.0);
         reactor.tick(&tick_context);
-        assert_power_eq(reactor.power_output, 60.0, "Ramp down tick 2");
+        assert_quantities_eq(reactor.power_output, 60_000.0);
         reactor.tick(&tick_context);
-        assert_power_eq(
-            reactor.power_output,
-            50.0,
-            "Ramp down tick 3 (reached target)",
-        );
+        assert_quantities_eq(reactor.power_output, 50_000.0);
         reactor.tick(&tick_context);
-        assert_power_eq(reactor.power_output, 50.0, "Ramp down tick 4 (at target)");
+        assert_quantities_eq(reactor.power_output, 50_000.0);
     }
 
     #[test]
     fn test_tick_online_mode_target_zero_ramps_down() {
-        let tick_context = setup_test_environment(1.0, 100.0, 10.0);
+        let tick_context = setup_test_environment(1.0, 100.0, 20.0);
         let mut reactor = Reactor {
             generator: System::Online {
                 damage: Damage::default(),
             },
-            power_output: Power::new::<kilowatt>(25.0),
+            power_output: Power::new::<kilowatt>(50.0),
             ..Default::default()
         };
         reactor.set_target_power_output(Power::new::<kilowatt>(0.0), tick_context.game_vars);
 
         reactor.tick(&tick_context);
-        assert_power_eq(reactor.power_output, 15.0, "Ramp to zero tick 1");
+        assert_quantities_eq(reactor.power_output, 30_000.0);
         reactor.tick(&tick_context);
-        assert_power_eq(reactor.power_output, 5.0, "Ramp to zero tick 2");
+        assert_quantities_eq(reactor.power_output, 10_000.0);
         reactor.tick(&tick_context);
-        assert_power_eq(
-            reactor.power_output,
-            0.0,
-            "Ramp to zero tick 3 (reached zero)",
-        );
+        assert_quantities_eq(reactor.power_output, 0.0);
         reactor.tick(&tick_context);
-        assert_power_eq(reactor.power_output, 0.0, "Ramp to zero tick 4 (at zero)");
+        assert_quantities_eq(reactor.power_output, 0.0);
     }
 }
