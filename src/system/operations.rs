@@ -18,7 +18,7 @@ pub enum SupplyDrop {
 
 #[derive(Debug, Default)]
 pub struct Operations {
-    pub online: bool,
+    pub offline: bool,
     pub supply_drop: SupplyDrop,
 }
 
@@ -34,7 +34,7 @@ impl Operations {
         let mut docking_completed = false;
         let mut current_power_consumption = Power::ZERO;
 
-        if self.online {
+        if !self.offline {
             current_power_consumption = context.game_vars.operations_base_power_demand;
         }
 
@@ -44,7 +44,7 @@ impl Operations {
             }
         }
         if let SupplyDrop::DockingInProgress { event_end } = &self.supply_drop {
-            if self.online {
+            if !self.offline {
                 current_power_consumption += context.game_vars.operations_docking_spike_power;
                 if context.mission_time >= *event_end {
                     self.supply_drop = SupplyDrop::Idle;
@@ -66,7 +66,7 @@ impl Operations {
     /// Attempts to authorize docking.
     /// Returns true if authorization was successful and docking started.
     pub fn authorize_docking(&mut self, context: &TickContext) -> bool {
-        if self.online {
+        if !self.offline {
             if let SupplyDrop::AwaitingAuthorization = self.supply_drop {
                 self.supply_drop = SupplyDrop::DockingInProgress {
                     event_end: context.mission_time
@@ -79,7 +79,7 @@ impl Operations {
     }
 
     pub fn set_online(&mut self, online: bool) {
-        self.online = online;
+        self.offline = !online;
     }
 }
 
@@ -107,14 +107,14 @@ mod tests {
 
         assert_quantities_eq(result.power_consumed, 10.0);
         assert!(!result.docking_completed);
-        assert!(matches!(ops.system, System::Online { .. }));
-        assert_eq!(ops.supply_drop, SupplyDrop::Idle);
+        assert!(!ops.offline);
+        assert!(matches!(ops.supply_drop, SupplyDrop::Idle));
     }
 
     #[test]
     fn test_operations_offline_power_demand() {
         let mut ops = Operations {
-            system: System::Offline,
+            offline: true,
             ..Default::default()
         };
         let context = TickContext::new_static(
@@ -130,7 +130,7 @@ mod tests {
 
         assert_quantities_eq(result.power_consumed, 0.0);
         assert!(!result.docking_completed);
-        assert!(matches!(ops.system, System::Offline));
+        assert!(ops.offline);
     }
 
     #[test]
@@ -145,7 +145,7 @@ mod tests {
 
         ops.tick(&context);
 
-        assert_eq!(ops.supply_drop, SupplyDrop::AwaitingAuthorization);
+        assert!(matches!(ops.supply_drop, SupplyDrop::AwaitingAuthorization));
     }
 
     #[test]
@@ -161,7 +161,7 @@ mod tests {
         let result = ops.tick(&context);
 
         assert!(result.docking_completed);
-        assert_eq!(ops.supply_drop, SupplyDrop::Idle);
+        assert!(matches!(ops.supply_drop, SupplyDrop::Idle));
     }
 
     #[test]
@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn test_authorize_docking_fail_system_offline() {
         let mut ops = Operations {
-            system: System::Offline,
+            offline: true,
             supply_drop: SupplyDrop::AwaitingAuthorization,
             ..Default::default()
         };
@@ -200,7 +200,7 @@ mod tests {
         let authorized = ops.authorize_docking(&context);
 
         assert!(!authorized);
-        assert_eq!(ops.supply_drop, SupplyDrop::AwaitingAuthorization);
+        assert!(matches!(ops.supply_drop, SupplyDrop::AwaitingAuthorization));
     }
 
     #[test]
@@ -214,7 +214,7 @@ mod tests {
         let authorized = ops.authorize_docking(&context);
 
         assert!(!authorized);
-        assert_eq!(ops.supply_drop, SupplyDrop::Idle);
+        assert!(matches!(ops.supply_drop, SupplyDrop::Idle));
     }
 
     #[test]
