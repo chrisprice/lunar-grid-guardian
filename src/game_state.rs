@@ -1,12 +1,15 @@
 use crate::event::Event;
 use crate::game_variables::GameVariables;
 use crate::system::battery::Battery;
+use crate::system::battery::BatteryMode;
 use crate::system::communications::Communications;
 use crate::system::life_support::LifeSupport;
 use crate::system::operations::Operations;
 use crate::system::reactor::Reactor;
 use crate::system::solar::Solar;
 use crate::tick_context::TickContext;
+use crate::rng;
+use rand::Rng;
 use uom::ConstZero;
 use uom::si::f32::{Frequency, Power, Time};
 use uom::si::frequency::hertz;
@@ -49,6 +52,7 @@ pub struct GameState<'a> {
 }
 
 impl<'a> GameState<'a> {
+    /// Creates a new `GameState` instance with default values and the provided game variables.
     pub fn new(game_vars: &'a GameVariables) -> Self {
         GameState {
             game_vars,
@@ -110,6 +114,9 @@ impl<'a> GameState<'a> {
         self.frequency_hz + rocof * tick_duration_seconds
     }
 
+    /// Advances the game state by one tick.
+    /// This includes updating mission time, processing events, calculating supply and demand,
+    /// updating system states, and adjusting grid frequency.
     pub fn tick(&mut self) {
         self.mission_time += Time::new::<second>(1.0);
 
@@ -172,8 +179,7 @@ impl<'a> GameState<'a> {
     }
 
     fn increment_random_boost(&mut self) {
-        let random_boost_type = self.mission_time.get::<second>() as u32 % 4;
-        match random_boost_type {
+        match rng().random_range(0..4) {
             0 => self.boost_life_support += 1,
             1 => self.boost_battery += 1,
             2 => self.boost_coolant += 1,
@@ -182,6 +188,7 @@ impl<'a> GameState<'a> {
         }
     }
 
+    /// Consumes a life support boost if available, applying its effects.
     pub fn use_life_support_boost(&mut self) {
         if self.boost_life_support > 0 {
             self.boost_life_support -= 1;
@@ -189,6 +196,7 @@ impl<'a> GameState<'a> {
         }
     }
 
+    /// Consumes a battery boost if available, applying its effects.
     pub fn use_battery_boost(&mut self) {
         if self.boost_battery > 0 {
             self.boost_battery -= 1;
@@ -196,6 +204,7 @@ impl<'a> GameState<'a> {
         }
     }
 
+    /// Consumes a coolant boost if available, applying its effects to the reactor.
     pub fn use_coolant_boost(&mut self) {
         if self.boost_coolant > 0 {
             self.boost_coolant -= 1;
@@ -203,6 +212,7 @@ impl<'a> GameState<'a> {
         }
     }
 
+    /// Consumes a repair boost if available, applying its effects to battery, reactor, and solar generators.
     pub fn use_repair_boost(&mut self) {
         if self.boost_repair > 0 {
             self.boost_repair -= 1;
@@ -212,15 +222,35 @@ impl<'a> GameState<'a> {
         }
     }
 
+    /// Toggles the emergency power restrictions for the life support system.
     pub fn toggle_life_support_emergency_restrictions(&mut self, state: bool) {
         self.life_support.set_emergency_restrictions(state);
     }
 
+    /// Toggles the online state of the operations system.
     pub fn toggle_operations_online(&mut self, state: bool) {
         self.operations.set_online(state);
     }
 
+    /// Toggles the online state of the communications system.
     pub fn toggle_comms_online(&mut self, state: bool) {
         self.comms.set_online(state);
+    }
+
+    /// Toggles the solar panel shields.
+    pub fn toggle_solar_shields(&mut self, active: bool) {
+        self.solar.set_shields_active(active);
+    }
+
+    /// Sets the target power output for the reactor.
+    /// The actual power output will ramp towards this target.
+    pub fn set_reactor_target_power_output(&mut self, target_power: Power) {
+        self.reactor
+            .set_target_power_output(target_power, self.game_vars);
+    }
+
+    /// Sets the operating mode for the battery (Auto, Charge, Discharge).
+    pub fn set_battery_mode(&mut self, mode: BatteryMode) {
+        self.battery.set_mode(mode);
     }
 }
