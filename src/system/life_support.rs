@@ -1,6 +1,6 @@
 use uom::ConstZero;
-use uom::si::f32::{Power, Time};
-use uom::si::time::{day, second};
+use uom::si::f32::Power;
+use uom::si::time::day;
 
 use crate::damage::Damage;
 use crate::game_variables::GameVariables;
@@ -25,17 +25,13 @@ impl LifeSupport {
     /// Returns the calculated power demand for the current tick.
     pub fn tick(&mut self, context: &TickContext) -> Power {
         if self.emergency_restrictions {
-            self.colony_damage.damage(
-                context.game_vars.colony_damage_rate_emergency / Time::new::<second>(1.0)
-                    * context.tick_delta,
-            );
+            self.colony_damage
+                .damage(context.game_vars.colony_damage_rate_emergency * context.tick_delta);
             Power::ZERO
         } else {
             if !self.colony_damage.is_offline() {
-                self.colony_damage.repair(
-                    context.game_vars.colony_damage_repair_rate / Time::new::<second>(1.0)
-                        * context.tick_delta,
-                );
+                self.colony_damage
+                    .repair(context.game_vars.colony_damage_repair_rate * context.tick_delta);
             }
 
             context.game_vars.life_support_base_power_demand
@@ -65,7 +61,7 @@ mod tests {
     use uom::si::f32::{Power, Ratio, Time};
     use uom::si::power::watt;
     use uom::si::ratio::percent;
-    use uom::si::time::day;
+    use uom::si::time::{day, second};
 
     #[test]
     fn test_life_support_initial_state() {
@@ -111,7 +107,7 @@ mod tests {
     fn test_life_support_emergency_restrictions_mode_power_and_damage() {
         let game_vars = GameVariables {
             life_support_base_power_demand: Power::new::<watt>(100.0),
-            colony_damage_rate_emergency: Ratio::new::<percent>(0.1),
+            colony_damage_rate_emergency: Ratio::new::<percent>(0.1) / Time::new::<second>(1.0),
             ..Default::default()
         };
         let mut life_support = LifeSupport::default();
@@ -127,7 +123,7 @@ mod tests {
     #[test]
     fn test_life_support_emergency_restrictions_mode_stops_repair() {
         let game_vars = GameVariables {
-            colony_damage_rate_emergency: Ratio::new::<percent>(0.1),
+            colony_damage_rate_emergency: Ratio::new::<percent>(0.1) / Time::new::<second>(1.0),
             repair_time: Time::new::<day>(1.0),
             ..Default::default()
         };
