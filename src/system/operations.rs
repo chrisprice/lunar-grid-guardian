@@ -1,10 +1,9 @@
-use crate::system::system::System;
 use crate::tick_context::TickContext;
 use uom::ConstZero;
 use uom::si::f32::Power;
 use uom::si::f32::Time;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Default)]
 pub enum SupplyDrop {
     #[default]
     Idle,
@@ -17,9 +16,9 @@ pub enum SupplyDrop {
     },
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Default)]
 pub struct Operations {
-    pub system: System,
+    pub online: bool,
     pub supply_drop: SupplyDrop,
 }
 
@@ -32,32 +31,31 @@ impl Operations {
     /// Ticks the state.
     /// Returns TickResult indicating power consumed and if docking completed.
     pub fn tick(&mut self, context: &TickContext) -> TickResult {
-        self.system.tick(context);
-
         let mut docking_completed = false;
         let mut current_power_consumption = Power::ZERO;
 
-        if self.system != System::Offline {
+        if self.online {
             current_power_consumption = context.game_vars.operations_base_power_demand;
-            if let SupplyDrop::DockingInProgress { .. } = self.supply_drop {
-                current_power_consumption += context.game_vars.operations_docking_spike_power;
-            }
         }
 
-        self.supply_drop = match self.supply_drop {
-            SupplyDrop::Scheduled { event_start }
-                if context.mission_time >= event_start =>
-            {
-                SupplyDrop::AwaitingAuthorization
+        if let SupplyDrop::Scheduled { event_start } = &self.supply_drop {
+            if context.mission_time >= *event_start {
+                self.supply_drop = SupplyDrop::AwaitingAuthorization;
             }
-            SupplyDrop::DockingInProgress { event_end, .. }
-                if context.mission_time >= event_end =>
-            {
-                docking_completed = true;
-                SupplyDrop::Idle
+        }
+        if let SupplyDrop::DockingInProgress { event_end } = &self.supply_drop {
+            if self.online {
+                current_power_consumption += context.game_vars.operations_docking_spike_power;
+                if context.mission_time >= *event_end {
+                    self.supply_drop = SupplyDrop::Idle;
+                    docking_completed = true;
+                }
+            } else {
+                self.supply_drop = SupplyDrop::DockingInProgress {
+                    event_end: *event_end + context.tick_delta,
+                };
             }
-            s => s,
-        };
+        }
 
         TickResult {
             power_consumed: current_power_consumption,
@@ -68,8 +66,8 @@ impl Operations {
     /// Attempts to authorize docking.
     /// Returns true if authorization was successful and docking started.
     pub fn authorize_docking(&mut self, context: &TickContext) -> bool {
-        if let System::Online { .. } = self.system {
-            if self.supply_drop == SupplyDrop::AwaitingAuthorization {
+        if self.online {
+            if let SupplyDrop::AwaitingAuthorization = self.supply_drop {
                 self.supply_drop = SupplyDrop::DockingInProgress {
                     event_end: context.mission_time
                         + context.game_vars.supply_drop_docking_duration,
@@ -78,6 +76,10 @@ impl Operations {
             }
         }
         false
+    }
+
+    pub fn set_online(&mut self, online: bool) {
+        self.online = online;
     }
 }
 

@@ -208,9 +208,20 @@ impl<'a> GameState<'a> {
         if self.boost_repair > 0 {
             self.boost_repair -= 1;
             self.battery.generator.boost(self.game_vars);
-            self.operations.system.boost(self.game_vars);
             self.reactor.generator.boost(self.game_vars);
             self.solar.generator.boost(self.game_vars);
         }
+    }
+
+    pub fn toggle_life_support_emergency_restrictions(&mut self, state: bool) {
+        self.life_support.set_emergency_restrictions(state);
+    }
+
+    pub fn toggle_operations_online(&mut self, state: bool) {
+        self.operations.set_online(state);
+    }
+
+    pub fn toggle_comms_online(&mut self, state: bool) {
+        self.comms.set_online(state);
     }
 }
