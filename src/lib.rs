@@ -10,6 +10,9 @@ pub mod lunar_phase;
 pub mod system;
 pub mod tick_context;
 
+#[cfg(test)]
+mod test;
+
 trait ConstOne {
     const ONE: Self;
 }
