@@ -1,4 +1,4 @@
-use crate::event_state::EventState;
+use crate::event::Event;
 use crate::game_variables::GameVariables;
 use crate::system::battery::Battery;
 use crate::system::communications::Communications;
@@ -48,9 +48,9 @@ pub struct GameState<'a> {
     pub boost_repair: u32,
 
     // Events
-    pub micrometeorite_event: EventState,
-    pub lunar_quake_event: EventState,
-    pub solar_flare_event: EventState,
+    pub micrometeorite: Event,
+    pub lunar_quake: Event,
+    pub solar_flare: Event,
 }
 
 impl<'a> GameState<'a> {
@@ -69,15 +69,15 @@ impl<'a> GameState<'a> {
             battery: Battery::default(),
             reactor: Reactor::default(),
             life_support: LifeSupport::default(),
+            operations: Operations::default(),
+            comms: Communications::default(),
             boost_life_support: 0,
             boost_battery: 0,
             boost_coolant: 0,
             boost_repair: 0,
-            micrometeorite_event: EventState::Dormant,
-            lunar_quake_event: EventState::Dormant,
-            solar_flare_event: EventState::Dormant,
-            operations: Operations::default(),
-            comms: Communications::default(),
+            micrometeorite: Event::new(game_vars.micrometeorite_event_probability),
+            lunar_quake: Event::new(game_vars.lunar_quake_event_probability),
+            solar_flare: Event::new(game_vars.solar_flare_event_probability),
         }
     }
 
@@ -127,15 +127,11 @@ impl<'a> GameState<'a> {
             tick_delta: self.mission_time - self.last_tick_time,
         };
 
-        self.micrometeorite_event.try_schedule(context, self.game_vars.micrometeorite_event_probability);
-        self.lunar_quake_event.try_schedule(context, self.game_vars.lunar_quake_event_probability);
-        self.solar_flare_event.try_schedule(context, self.game_vars.solar_flare_event_probability);
-
-        if self.micrometeorite_event.tick(context) {
+        if self.micrometeorite.tick(context) {
             self.solar
                 .damage(self.game_vars.micrometeorite_damage_solar);
         }
-        if self.lunar_quake_event.tick(context) {
+        if self.lunar_quake.tick(context) {
             self.battery
                 .generator
                 .damage(self.game_vars.lunar_quake_damage_battery);
@@ -143,7 +139,7 @@ impl<'a> GameState<'a> {
                 .generator
                 .damage(self.game_vars.lunar_quake_damage_reactor);
         }
-        if self.solar_flare_event.tick(context) {
+        if self.solar_flare.tick(context) {
             self.battery
                 .generator
                 .damage(self.game_vars.solar_flare_spike_damage_battery);

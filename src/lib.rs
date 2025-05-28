@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use uom::si::f32::Ratio;
 
 pub mod damage;
-pub mod event_state;
+pub mod event;
 pub mod game_state;
 pub mod game_variables;
 pub mod lunar_phase;
