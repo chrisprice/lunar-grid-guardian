@@ -1,3 +1,4 @@
+use rand::RngCore;
 use std::marker::PhantomData;
 use uom::si::f32::Ratio;
 
@@ -19,6 +20,11 @@ impl ConstOne for Ratio {
         units: PhantomData,
         value: 1.0,
     };
+}
+
+/// Returns a random number generator.
+pub fn rng() -> impl RngCore {
+    rand::rng()
 }
 
 #[cfg(test)]

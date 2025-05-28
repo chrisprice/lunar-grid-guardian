@@ -1,11 +1,11 @@
-use uom::si::f32::{Energy, Frequency, Power, PowerRate, Ratio, Time};
+use std::marker::PhantomData;
 use uom::si::energy::kilowatt_hour;
+use uom::si::f32::{Energy, Frequency, Power, PowerRate, Ratio, Time};
+use uom::si::frequency::hertz;
 use uom::si::power::watt;
 use uom::si::power_rate::watt_per_second;
-use uom::si::time::{day, minute, second};
-use uom::si::frequency::hertz;
 use uom::si::ratio::percent;
-
+use uom::si::time::{day, minute, second};
 
 /// Game balancing variables as specified in README.md Table 1.
 pub struct GameVariables {
@@ -67,6 +67,16 @@ pub struct GameVariables {
     pub boost_battery_amount: Energy,
     pub boost_coolant_energy_capacity: Energy,
     pub boost_repair_amount: Ratio,
+    /// Probability of a micrometeorite event occurring per tick.
+    pub micrometeorite_event_probability: Ratio,
+    /// Probability of a lunar quake event occurring per tick.
+    pub lunar_quake_event_probability: Ratio,
+    /// Probability of a solar flare event occurring per tick.
+    pub solar_flare_event_probability: Ratio,
+    /// Event Duration (seconds)
+    pub event_duration: Time,
+    /// Event Schedule Offset (seconds)
+    pub event_schedule_offset: Time,
 }
 
 impl Default for GameVariables {
@@ -103,6 +113,19 @@ impl Default for GameVariables {
             boost_battery_amount: Energy::new::<kilowatt_hour>(50.0),
             boost_coolant_energy_capacity: Energy::new::<kilowatt_hour>(10.0),
             boost_repair_amount: Ratio::new::<percent>(50.0),
+            micrometeorite_event_probability: Ratio::new::<percent>(1.0),
+            lunar_quake_event_probability: Ratio::new::<percent>(1.0),
+            solar_flare_event_probability: Ratio::new::<percent>(1.0),
+            event_duration: Time {
+                dimension: PhantomData,
+                units: PhantomData,
+                value: 3.0,
+            },
+            event_schedule_offset: Time {
+                dimension: PhantomData,
+                units: PhantomData,
+                value: 10.0,
+            },
         }
     }
 }

@@ -127,6 +127,10 @@ impl<'a> GameState<'a> {
             tick_delta: self.mission_time - self.last_tick_time,
         };
 
+        self.micrometeorite_event.try_schedule(context, self.game_vars.micrometeorite_event_probability);
+        self.lunar_quake_event.try_schedule(context, self.game_vars.lunar_quake_event_probability);
+        self.solar_flare_event.try_schedule(context, self.game_vars.solar_flare_event_probability);
+
         if self.micrometeorite_event.tick(context) {
             self.solar
                 .damage(self.game_vars.micrometeorite_damage_solar);
@@ -189,7 +193,7 @@ impl<'a> GameState<'a> {
             _ => panic!("Unexpected random boost type"),
         }
     }
-    
+
     pub fn use_life_support_boost(&mut self) {
         if self.boost_life_support > 0 {
             self.boost_life_support -= 1;

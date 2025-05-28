@@ -1,8 +1,7 @@
+use crate::rng;
 use crate::tick_context::TickContext;
-use uom::si::f32::Time;
-use uom::si::time::second;
-
-const EVENT_DURATION_SECONDS: f32 = 3.0;
+use rand::Rng;
+use uom::si::f32::{Ratio, Time};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EventState {
@@ -21,7 +20,7 @@ impl EventState {
                 if context.mission_time >= *event_start =>
             {
                 *self = EventState::Impacting {
-                    event_end: *event_start + Time::new::<second>(EVENT_DURATION_SECONDS),
+                    event_end: *event_start + context.game_vars.event_duration,
                 };
                 true
             }
@@ -34,5 +33,22 @@ impl EventState {
             | EventState::Impacting { .. }
             | EventState::Dormant => false,
         }
+    }
+
+    /// Attempts to schedule the event if it is currently dormant.
+    ///
+    /// Returns `true` if the event was successfully scheduled.
+    pub fn try_schedule(&mut self, context: &TickContext, probability: Ratio) -> bool {
+        if let EventState::Dormant = self {
+            if rng().random_bool(probability.value as f64) {
+                let event_start_time =
+                    context.mission_time + context.game_vars.event_schedule_offset;
+                *self = EventState::Scheduled {
+                    event_start: event_start_time,
+                };
+                return true;
+            }
+        }
+        false
     }
 }
