@@ -69,8 +69,8 @@ pub struct GameVariables {
     pub boost_life_support_amount: Ratio,
     /// Boost to Battery Amount
     pub boost_battery_amount: Energy,
-    /// Boost to Coolant Energy Capacity
-    pub boost_coolant_energy_capacity: Energy,
+    /// Boost to Coolant Amount
+    pub boost_coolant_amount: Energy,
     /// Boost to Repair Amount
     pub boost_repair_amount: Ratio,
     /// Micrometeorite Event Probability
@@ -118,7 +118,7 @@ impl Default for GameVariables {
             supply_drop_docking_duration: Time::new::<second>(10.0),
             boost_life_support_amount: Ratio::new::<percent>(25.0),
             boost_battery_amount: Energy::new::<kilowatt_hour>(50.0),
-            boost_coolant_energy_capacity: Energy::new::<kilowatt_hour>(10.0),
+            boost_coolant_amount: Energy::new::<kilowatt_hour>(10.0),
             boost_repair_amount: Ratio::new::<percent>(50.0),
             micrometeorite_event_probability: Ratio::new::<percent>(1.0),
             lunar_quake_event_probability: Ratio::new::<percent>(1.0),

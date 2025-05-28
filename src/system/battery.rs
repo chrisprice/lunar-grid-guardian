@@ -97,10 +97,9 @@ mod tests {
     use crate::game_variables::GameVariables;
     use crate::tick_context::TickContext;
     use uom::si::energy::kilowatt_hour;
-    use uom::si::f32::{Energy, Power, Ratio, Time};
+    use uom::si::f32::{Energy, Power, Ratio};
     use uom::si::power::kilowatt;
     use uom::si::ratio::percent;
-    use uom::si::time::second;
 
     const EPSILON: f32 = 1e-1;
 
@@ -124,22 +123,13 @@ mod tests {
         );
     }
 
-    fn setup_tick_context(battery_capacity_kwh: f32, tick_delta_s: f32) -> TickContext<'static> {
-        let game_vars = Box::leak(Box::new(GameVariables {
-            battery_capacity: Energy::new::<kilowatt_hour>(battery_capacity_kwh),
-            ..Default::default()
-        }));
-
-        TickContext {
-            game_vars,
-            tick_delta: Time::new::<second>(tick_delta_s),
-            mission_time: Time::new::<second>(0.0),
-        }
-    }
-
     #[test]
     fn test_tick_generator_offline() {
-        let tick_context = setup_tick_context(10.0, 1.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 1.0);
         let mut battery = Battery {
             state: State::Offline,
             charge: Energy::new::<kilowatt_hour>(5.0),
@@ -155,7 +145,11 @@ mod tests {
 
     #[test]
     fn test_tick_charge_mode_with_surplus() {
-        let tick_context = setup_tick_context(10.0, 3600.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 3600.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::default(),
@@ -173,7 +167,11 @@ mod tests {
 
     #[test]
     fn test_tick_charge_mode_reaches_full() {
-        let tick_context = setup_tick_context(10.0, 3600.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 3600.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::default(),
@@ -191,7 +189,11 @@ mod tests {
 
     #[test]
     fn test_tick_charge_mode_already_full() {
-        let tick_context = setup_tick_context(10.0, 1.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 1.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::default(),
@@ -209,7 +211,11 @@ mod tests {
 
     #[test]
     fn test_tick_charge_mode_with_deficit() {
-        let tick_context = setup_tick_context(10.0, 1.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 1.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::default(),
@@ -227,7 +233,11 @@ mod tests {
 
     #[test]
     fn test_tick_charge_mode_with_damage() {
-        let tick_context = setup_tick_context(10.0, 3600.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 3600.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::new(Ratio::new::<percent>(50.0)),
@@ -245,7 +255,11 @@ mod tests {
 
     #[test]
     fn test_tick_discharge_mode_with_deficit() {
-        let tick_context = setup_tick_context(10.0, 3600.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 3600.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::default(),
@@ -263,7 +277,11 @@ mod tests {
 
     #[test]
     fn test_tick_discharge_mode_reaches_empty() {
-        let tick_context = setup_tick_context(10.0, 3600.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 3600.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::default(),
@@ -281,7 +299,11 @@ mod tests {
 
     #[test]
     fn test_tick_discharge_mode_already_empty() {
-        let tick_context = setup_tick_context(10.0, 1.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 1.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::default(),
@@ -299,7 +321,11 @@ mod tests {
 
     #[test]
     fn test_tick_discharge_mode_with_surplus() {
-        let tick_context = setup_tick_context(10.0, 1.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 1.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::default(),
@@ -317,7 +343,11 @@ mod tests {
 
     #[test]
     fn test_tick_discharge_mode_with_damage() {
-        let tick_context = setup_tick_context(10.0, 3600.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 3600.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::new(Ratio::new::<percent>(50.0)),
@@ -335,7 +365,11 @@ mod tests {
 
     #[test]
     fn test_tick_auto_mode_no_damage_surplus_charges() {
-        let tick_context = setup_tick_context(10.0, 3600.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 3600.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::default(),
@@ -353,7 +387,11 @@ mod tests {
 
     #[test]
     fn test_tick_auto_mode_no_damage_deficit_discharges() {
-        let tick_context = setup_tick_context(10.0, 3600.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 3600.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::default(),
@@ -371,7 +409,11 @@ mod tests {
 
     #[test]
     fn test_tick_auto_mode_no_damage_balanced_no_action() {
-        let tick_context = setup_tick_context(10.0, 1.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 1.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::default(),
@@ -389,7 +431,11 @@ mod tests {
 
     #[test]
     fn test_tick_auto_mode_with_damage_surplus_charges_less_effectively() {
-        let tick_context = setup_tick_context(10.0, 1.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 1.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::new(Ratio::new::<percent>(10.0)),
@@ -407,7 +453,11 @@ mod tests {
 
     #[test]
     fn test_tick_auto_mode_with_damage_deficit_discharges_normally() {
-        let tick_context = setup_tick_context(10.0, 1.0);
+        let game_vars = GameVariables {
+            battery_capacity: Energy::new::<kilowatt_hour>(10.0),
+            ..Default::default()
+        };
+        let tick_context = TickContext::new_static(&game_vars, 0.0, 1.0);
         let mut battery = Battery {
             state: State::Online {
                 damage: Damage::new(Ratio::new::<percent>(10.0)),
