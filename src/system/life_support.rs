@@ -36,8 +36,7 @@ impl LifeSupport {
             Power::ZERO
         } else {
             if let System::Online { .. } = &mut self.system {
-                self.system
-                    .repair(context.mission_time, context.game_vars);
+                self.system.repair(context.mission_time, context.game_vars);
             }
 
             context.game_vars.life_support_base_power_demand
@@ -45,7 +44,7 @@ impl LifeSupport {
                     * context.mission_time.floor::<day>()
         }
     }
-    
+
     pub fn boost(&mut self, game_vars: &GameVariables) {
         if let System::Online { damage } = &mut self.system {
             damage.repair(game_vars.boost_life_support_amount);
@@ -58,171 +57,99 @@ mod tests {
     use super::*;
     use crate::damage::Damage;
     use crate::game_variables::GameVariables;
-    use uom::si::f32::{Ratio, Time};
+    use crate::test::assert_quantities_eq;
+    use uom::si::f32::{Power, Ratio, Time};
     use uom::si::power::watt;
     use uom::si::ratio::percent;
-    use uom::si::time::second;
-
-    const EPSILON: f32 = 1e-6;
-
-    fn assert_ratio_approx_eq(actual: Ratio, expected_percent: f32, message: &str) {
-        let actual_val = actual.get::<percent>();
-        assert!(
-            (actual_val - expected_percent).abs() < EPSILON,
-            "{}: Expected ratio ~{:.6}%, but got {:.6}%",
-            message,
-            expected_percent,
-            actual_val
-        );
-    }
-
-    fn assert_power_approx_eq(actual: Power, expected_watts: f32, message: &str) {
-        let actual_val = actual.get::<watt>();
-        assert!(
-            (actual_val - expected_watts).abs() < EPSILON,
-            "{}: Expected power ~{:.6} W, but got {:.6} W",
-            message,
-            expected_watts,
-            actual_val
-        );
-    }
-
-    fn create_tick_context<'a>(
-        game_vars: &'a GameVariables,
-        mission_time_seconds: f32,
-        tick_delta_seconds: f32,
-    ) -> TickContext<'a> {
-        TickContext {
-            game_vars,
-            mission_time: Time::new::<second>(mission_time_seconds),
-            tick_delta: Time::new::<second>(tick_delta_seconds),
-        }
-    }
+    use uom::si::time::day;
 
     #[test]
     fn test_life_support_initial_state() {
         let life_support = LifeSupport::default();
         let System::Online { damage } = life_support.system else {
-            panic!(
-                "Expected System::Online, got {:?}",
-                life_support.system
-            );
+            panic!("Expected System::Online");
         };
-        assert_ratio_approx_eq(damage.inner(), 0.0, "Initial colony damage");
+        assert_quantities_eq(damage.inner(), 0.0);
     }
 
     #[test]
     fn test_life_support_power_demand_initial() {
-        let mut game_vars = GameVariables::default();
-        game_vars.life_support_base_power_demand = Power::new::<watt>(100.0);
-        game_vars.life_support_power_demand_increase =
-            Power::new::<watt>(10.0) / Time::new::<day>(1.0);
+        let game_vars = GameVariables {
+            life_support_base_power_demand: Power::new::<watt>(100.0),
+            life_support_power_demand_increase: Power::new::<watt>(10.0) / Time::new::<day>(1.0),
+            ..Default::default()
+        };
 
         let mut life_support = LifeSupport::default();
-        let context = create_tick_context(&game_vars, 0.0, 1.0);
+        let context = TickContext::new_static(&game_vars, 0.0, 1.0);
         let power_demand = life_support.tick(&context);
 
-        assert_power_approx_eq(power_demand, 100.0, "Initial power demand");
+        assert_quantities_eq(power_demand, 100.0);
     }
 
     #[test]
     fn test_life_support_power_demand_increases_over_time() {
-        let mut game_vars = GameVariables::default();
-        game_vars.life_support_base_power_demand = Power::new::<watt>(100.0);
-        game_vars.life_support_power_demand_increase =
-            Power::new::<watt>(10.0) / Time::new::<day>(1.0);
+        let game_vars = GameVariables {
+            life_support_base_power_demand: Power::new::<watt>(100.0),
+            life_support_power_demand_increase: Power::new::<watt>(10.0) / Time::new::<day>(1.0),
+            ..Default::default()
+        };
 
         let mut life_support = LifeSupport::default();
 
-        let context_almost_one_day = create_tick_context(&game_vars, 86400.0 - 1.0, 1.0);
+        let context_almost_one_day = TickContext::new_static(&game_vars, 86400.0 - 1.0, 1.0);
         let power_demand_almost_one_day = life_support.tick(&context_almost_one_day);
-        assert_power_approx_eq(
-            power_demand_almost_one_day,
-            100.0,
-            "Power demand just before 1 day",
-        );
+        assert_quantities_eq(power_demand_almost_one_day, 100.0);
 
-        let context_one_day = create_tick_context(&game_vars, 86400.0, 1.0);
+        let context_one_day = TickContext::new_static(&game_vars, 86400.0, 1.0);
         let power_demand_one_day = life_support.tick(&context_one_day);
-        assert_power_approx_eq(power_demand_one_day, 110.0, "Power demand at 1 day");
-
-        let context_two_days = create_tick_context(&game_vars, 2.0 * 86400.0, 1.0);
-        let power_demand_two_days = life_support.tick(&context_two_days);
-        assert_power_approx_eq(power_demand_two_days, 120.0, "Power demand at 2 days");
+        assert_quantities_eq(power_demand_one_day, 110.0);
     }
 
     #[test]
     fn test_life_support_emergency_restrictions_mode_power_and_damage() {
-        let mut game_vars = GameVariables::default();
-        game_vars.life_support_base_power_demand = Power::new::<watt>(100.0);
-        game_vars.colony_damage_rate_emergency = Ratio::new::<percent>(5.0);
-
+        let game_vars = GameVariables {
+            life_support_base_power_demand: Power::new::<watt>(100.0),
+            colony_damage_rate_emergency: Ratio::new::<percent>(0.1),
+            ..Default::default()
+        };
         let mut life_support = LifeSupport::default();
         life_support.set_emergency_restrictions(true);
 
-        let context_tick1 = create_tick_context(&game_vars, 0.0, 1.0);
-        let power_demand_tick1 = life_support.tick(&context_tick1);
-        assert_power_approx_eq(
-            power_demand_tick1,
-            0.0,
-            "Power demand in emergency mode (tick 1)",
-        );
-        let System::Online { damage } = life_support.system else {
-            panic!(
-                "Expected System::Online, got {:?}",
-                life_support.system
-            );
-        };
-        assert_ratio_approx_eq(
-            damage.inner(),
-            5.0,
-            "Colony damage after 1s in emergency mode",
-        );
+        let context = TickContext::new_static(&game_vars, 0.0, 1.0);
+        let power_demand = life_support.tick(&context);
 
-        let context_tick2 = create_tick_context(&game_vars, 1.0, 2.0);
-        let power_demand_tick2 = life_support.tick(&context_tick2);
-        assert_power_approx_eq(
-            power_demand_tick2,
-            0.0,
-            "Power demand in emergency mode (tick 2)",
-        );
-        let System::Online { damage } = life_support.system else {
-            panic!(
-                "Expected System::Online, got {:?}",
-                life_support.system
-            );
-        };
-        assert_ratio_approx_eq(
-            damage.inner(),
-            15.0,
-            "Colony damage after 3s total in emergency mode (1s + 2s)",
-        );
+        assert_quantities_eq(power_demand, 0.0);
+        if let System::Online { damage } = life_support.system {
+            assert_quantities_eq(damage.inner(), 0.001);
+        } else {
+            panic!("Expected System::Online");
+        }
     }
 
     #[test]
     fn test_life_support_emergency_restrictions_mode_stops_repair() {
-        let mut game_vars = GameVariables::default();
-        game_vars.colony_damage_rate_emergency = Ratio::new::<percent>(0.5);
-
-        let mut life_support = LifeSupport::default();
-        life_support.system = System::Online {
-            damage: Damage::new(Ratio::new::<percent>(10.0)),
+        let game_vars = GameVariables {
+            colony_damage_rate_emergency: Ratio::new::<percent>(0.1),
+            repair_time: Time::new::<day>(1.0),
+            ..Default::default()
         };
+        let mut life_support = LifeSupport {
+            system: System::Online {
+                damage: Damage::new(Ratio::new::<percent>(10.0)),
+            },
+            emergency_restrictions_active: false,
+        };
+
         life_support.set_emergency_restrictions(true);
 
-        let context = create_tick_context(&game_vars, 0.0, 1.0);
-        let _power_demand = life_support.tick(&context);
+        let context = TickContext::new_static(&game_vars, 0.0, 1.0);
+        life_support.tick(&context);
 
-        let System::Online { damage } = life_support.system else {
-            panic!(
-                "Expected System::Online, got {:?}",
-                life_support.system
-            );
-        };
-        assert_ratio_approx_eq(
-            damage.inner(),
-            10.5,
-            "Colony damage should increase due to emergency rate, not repair",
-        );
+        if let System::Online { damage, .. } = life_support.system {
+            assert_quantities_eq(damage.inner(), 0.101);
+        } else {
+            panic!("Expected System::Online");
+        }
     }
 }

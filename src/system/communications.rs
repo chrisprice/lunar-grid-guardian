@@ -29,42 +29,44 @@ impl Communications {
 mod tests {
     use super::*;
     use crate::game_variables::GameVariables;
+    use crate::test::assert_quantities_eq;
     use uom::si::power::watt;
-
-    fn create_tick_context<'a>(
-        game_vars: &'a GameVariables,
-        mission_time_seconds: f32,
-        tick_delta_seconds: f32,
-    ) -> TickContext<'a> {
-        TickContext {
-            game_vars,
-            mission_time: uom::si::f32::Time::new::<uom::si::time::second>(mission_time_seconds),
-            tick_delta: uom::si::f32::Time::new::<uom::si::time::second>(tick_delta_seconds),
-        }
-    }
 
     #[test]
     fn test_comms_initial_state_online_power_demand() {
         let mut comms = Communications::default();
-        let mut game_vars = GameVariables::default();
-        game_vars.comms_power_demand = Power::new::<watt>(50.0);
-        let context = create_tick_context(&game_vars, 0.0, 1.0);
+        let context = TickContext::new_static(
+            &GameVariables {
+                comms_power_demand: Power::new::<watt>(50.0),
+                ..Default::default()
+            },
+            0.0,
+            1.0,
+        );
 
         let power_demand = comms.tick(&context);
-        assert_eq!(power_demand.get::<watt>(), 50.0);
+
+        assert_quantities_eq(power_demand, 50.0);
         assert!(matches!(comms.system, System::Online { .. }));
     }
 
-    #[test]
-    fn test_comms_offline_power_demand() {
-        let mut comms = Communications {
-            system: System::Offline,
-        };
-        let mut game_vars = GameVariables::default();
-        game_vars.comms_power_demand = Power::new::<watt>(50.0);
-        let context = create_tick_context(&game_vars, 0.0, 1.0);
+        #[test]
+        fn test_comms_offline_power_demand() {
+            let mut comms = Communications {
+                system: System::Offline,
+            };
+            let context = TickContext::new_static(
+                &GameVariables {
+                    comms_power_demand: Power::new::<watt>(50.0),
+                    ..Default::default()
+                },
+                0.0,
+                1.0,
+            );
 
-        let power_demand = comms.tick(&context);
-        assert_eq!(power_demand.get::<watt>(), 0.0);
-    }
+            let power_demand = comms.tick(&context);
+
+            assert_quantities_eq(power_demand, 0.0);
+            assert!(matches!(comms.system, System::Offline));
+        }
 }

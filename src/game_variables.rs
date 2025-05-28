@@ -8,6 +8,7 @@ use uom::si::ratio::percent;
 use uom::si::time::{day, minute, second};
 
 /// Game balancing variables as specified in README.md Table 1.
+#[derive(Clone)]
 pub struct GameVariables {
     /// System Inertia Constant (seconds)
     pub system_inertia_h: Time,

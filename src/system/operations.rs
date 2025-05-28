@@ -80,3 +80,160 @@ impl Operations {
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game_variables::GameVariables;
+    use crate::test::assert_quantities_eq;
+    use crate::tick_context::TickContext;
+    use uom::si::{f32::Time, power::watt, time::second};
+
+    #[test]
+    fn test_operations_initial_state_idle_power_demand() {
+        let mut ops = Operations::default();
+        let context = TickContext::new_static(
+            &GameVariables {
+                operations_base_power_demand: Power::new::<watt>(10.0),
+                ..Default::default()
+            },
+            0.0,
+            1.0,
+        );
+
+        let result = ops.tick(&context);
+
+        assert_quantities_eq(result.power_consumed, 10.0);
+        assert!(!result.docking_completed);
+        assert!(matches!(ops.system, System::Online { .. }));
+        assert_eq!(ops.supply_drop, SupplyDrop::Idle);
+    }
+
+    #[test]
+    fn test_operations_offline_power_demand() {
+        let mut ops = Operations {
+            system: System::Offline,
+            ..Default::default()
+        };
+        let context = TickContext::new_static(
+            &GameVariables {
+                operations_base_power_demand: Power::new::<watt>(10.0),
+                ..Default::default()
+            },
+            0.0,
+            1.0,
+        );
+
+        let result = ops.tick(&context);
+
+        assert_quantities_eq(result.power_consumed, 0.0);
+        assert!(!result.docking_completed);
+        assert!(matches!(ops.system, System::Offline));
+    }
+
+    #[test]
+    fn test_supply_drop_scheduled_to_awaiting_authorization() {
+        let mut ops = Operations {
+            supply_drop: SupplyDrop::Scheduled {
+                event_start: Time::new::<second>(100.0),
+            },
+            ..Default::default()
+        };
+        let context = TickContext::new_static(&GameVariables::default(), 100.0, 1.0);
+
+        ops.tick(&context);
+
+        assert_eq!(ops.supply_drop, SupplyDrop::AwaitingAuthorization);
+    }
+
+    #[test]
+    fn test_supply_drop_docking_to_idle_on_completion() {
+        let mut ops = Operations {
+            supply_drop: SupplyDrop::DockingInProgress {
+                event_end: Time::new::<second>(200.0),
+            },
+            ..Default::default()
+        };
+        let context = TickContext::new_static(&GameVariables::default(), 200.0, 1.0);
+
+        let result = ops.tick(&context);
+
+        assert!(result.docking_completed);
+        assert_eq!(ops.supply_drop, SupplyDrop::Idle);
+    }
+
+    #[test]
+    fn test_authorize_docking_success() {
+        let mut ops = Operations {
+            supply_drop: SupplyDrop::AwaitingAuthorization,
+            ..Default::default()
+        };
+        let context = TickContext::new_static(
+            &GameVariables {
+                supply_drop_docking_duration: Time::new::<second>(60.0),
+                ..Default::default()
+            },
+            0.0,
+            1.0,
+        );
+
+        let authorized = ops.authorize_docking(&context);
+
+        assert!(authorized);
+        assert!(matches!(
+            ops.supply_drop,
+            SupplyDrop::DockingInProgress { .. }
+        ));
+    }
+
+    #[test]
+    fn test_authorize_docking_fail_system_offline() {
+        let mut ops = Operations {
+            system: System::Offline,
+            supply_drop: SupplyDrop::AwaitingAuthorization,
+            ..Default::default()
+        };
+        let context = TickContext::new_static(&GameVariables::default(), 0.0, 1.0);
+
+        let authorized = ops.authorize_docking(&context);
+
+        assert!(!authorized);
+        assert_eq!(ops.supply_drop, SupplyDrop::AwaitingAuthorization);
+    }
+
+    #[test]
+    fn test_authorize_docking_fail_not_awaiting_authorization() {
+        let mut ops = Operations {
+            supply_drop: SupplyDrop::Idle,
+            ..Default::default()
+        };
+        let context = TickContext::new_static(&GameVariables::default(), 0.0, 1.0);
+
+        let authorized = ops.authorize_docking(&context);
+
+        assert!(!authorized);
+        assert_eq!(ops.supply_drop, SupplyDrop::Idle);
+    }
+
+    #[test]
+    fn test_docking_power_spike() {
+        let mut ops = Operations {
+            supply_drop: SupplyDrop::DockingInProgress {
+                event_end: Time::new::<second>(10.0),
+            },
+            ..Default::default()
+        };
+        let context = TickContext::new_static(
+            &GameVariables {
+                operations_base_power_demand: Power::new::<watt>(10.0),
+                operations_docking_spike_power: Power::new::<watt>(5.0),
+                ..Default::default()
+            },
+            0.0,
+            1.0,
+        );
+
+        let result = ops.tick(&context);
+        assert_quantities_eq(result.power_consumed, 15.0);
+    }
+}

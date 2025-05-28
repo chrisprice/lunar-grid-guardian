@@ -23,11 +23,11 @@ impl<'a> TickContext<'a> {
 
     #[cfg(test)]
     pub fn new_static(
-        game_vars: GameVariables,
+        game_vars: &GameVariables,
         mission_time_s: f32,
         tick_delta_s: f32,
     ) -> TickContext<'static> {
-        let static_game_vars = Box::leak(Box::new(game_vars));
+        let static_game_vars = Box::leak(Box::new(game_vars.clone()));
         TickContext {
             game_vars: static_game_vars,
             mission_time: Time::new::<second>(mission_time_s),
