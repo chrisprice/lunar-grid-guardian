@@ -1,3 +1,4 @@
+use crate::game_variables::GameVariables;
 use crate::lunar_phase::LunarPhase;
 use crate::system::state::State;
 use crate::tick_context::TickContext;
@@ -8,17 +9,17 @@ use uom::si::ratio::ratio;
 
 #[derive(Debug, Default)]
 pub struct Solar {
-    pub generator: State,
-    pub shields_active: bool,
+    state: State,
+    shields_active: bool,
 }
 
 impl Solar {
     /// Ticks the solar state.
     /// Returns the amount of power generated.
     pub fn tick(&mut self, context: &TickContext) -> Power {
-        self.generator.tick(context);
+        self.state.tick(context);
 
-        let State::Online { damage } = &self.generator else {
+        let State::Online { damage } = &self.state else {
             return Power::ZERO;
         };
 
@@ -44,8 +45,12 @@ impl Solar {
     /// If shields are active, damage is not applied.
     pub fn damage(&mut self, amount: Ratio) {
         if !self.shields_active {
-            self.generator.damage(amount);
+            self.state.damage(amount);
         }
+    }
+
+    pub fn repair_boost(&mut self, game_vars: &GameVariables) {
+        self.state.repair_boost(game_vars);
     }
 }
 
@@ -65,7 +70,7 @@ mod tests {
 
     fn solar_online(damage_value: f32, shields_active: bool) -> Solar {
         Solar {
-            generator: State::Online {
+            state: State::Online {
                 damage: Damage::new(Ratio::new::<ratio>(damage_value)),
             },
             shields_active,
@@ -222,7 +227,7 @@ mod tests {
         let game_vars = default_game_vars(NOMINAL_SOLAR_OUTPUT, MISSION_TIME_PER_LUNAR_TIME_RATIO);
         let context = create_day_tick_context(&game_vars, 0.5);
         let mut solar = Solar {
-            generator: State::Offline,
+            state: State::Offline,
             shields_active: false,
         };
         let power = solar.tick(&context);

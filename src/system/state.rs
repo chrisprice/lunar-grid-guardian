@@ -48,7 +48,7 @@ impl State {
         }
     }
 
-    pub fn boost(&mut self, game_vars: &GameVariables) {
+    pub fn repair_boost(&mut self, game_vars: &GameVariables) {
         if let Self::Online { damage } = self {
             damage.repair(game_vars.boost_repair_amount);
         }

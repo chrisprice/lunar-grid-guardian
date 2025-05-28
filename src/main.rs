@@ -83,8 +83,8 @@ fn ui(f: &mut Frame, app: &App) {
         .constraints([Constraint::Percentage(100)].as_ref())
         .split(f.size());
 
-    let mission_time_seconds = app.game_state.mission_time.get::<uom::si::time::second>();
-    let timer_text = format!("Mission Time: {:.0}s", mission_time_seconds);
+    let mission_time_seconds = app.game_state.mission_time();
+    let timer_text = format!("Mission Time: {:?}", mission_time_seconds);
     let timer_paragraph = Paragraph::new(timer_text).block(
         Block::default()
             .title("Mission Timer")

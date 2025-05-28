@@ -7,11 +7,11 @@ use uom::si::f32::{Energy, Power, Ratio};
 
 #[derive(Debug, Default)]
 pub struct Reactor {
-    pub core_thermal_energy: Energy,
-    pub coolant_energy_absorption_capacity: Energy,
-    pub generator: State,
-    pub power_output: Power,
-    pub target_power_output: Power,
+    core_thermal_energy: Energy,
+    coolant_energy_absorption_capacity: Energy,
+    state: State,
+    power_output: Power,
+    target_power_output: Power,
 }
 
 impl Reactor {
@@ -25,10 +25,10 @@ impl Reactor {
     }
 
     pub fn tick(&mut self, context: &TickContext) -> Power {
-        self.generator.tick(context);
+        self.state.tick(context);
 
         let ramp_amount = context.game_vars.reactor_power_ramp_rate * context.tick_delta;
-        self.power_output = match &self.generator {
+        self.power_output = match &self.state {
             State::Online { damage } => {
                 let mut power_output = self.power_output;
 
@@ -52,7 +52,7 @@ impl Reactor {
                     (self.coolant_energy_absorption_capacity - coolant_used).max(Energy::ZERO);
 
                 if self.core_thermal_energy >= context.game_vars.reactor_critical_thermal_energy {
-                    self.generator = State::Offline;
+                    self.state = State::Offline;
                     return Power::ZERO;
                 }
 
@@ -74,6 +74,14 @@ impl Reactor {
 
     pub fn boost(&mut self, game_vars: &GameVariables) {
         self.coolant_energy_absorption_capacity += game_vars.boost_coolant_energy_capacity;
+    }
+
+    pub fn damage(&mut self, amount: Ratio) {
+        self.state.damage(amount);
+    }
+
+    pub fn repair_boost(&mut self, game_vars: &GameVariables) {
+        self.state.repair_boost(game_vars);
     }
 }
 
@@ -115,7 +123,7 @@ mod tests {
     fn test_set_target_power_output_online_generator() {
         let tick_context = setup_test_environment(1.0, 100.0, 10.0);
         let mut reactor = Reactor {
-            generator: State::Online {
+            state: State::Online {
                 damage: Damage::default(),
             },
             ..Default::default()
@@ -134,7 +142,7 @@ mod tests {
     fn test_set_target_power_output_offline_generator() {
         let tick_context = setup_test_environment(1.0, 100.0, 10.0);
         let mut reactor = Reactor {
-            generator: State::Offline,
+            state: State::Offline,
             target_power_output: Power::new::<kilowatt>(50.0),
             ..Default::default()
         };
@@ -146,7 +154,7 @@ mod tests {
     fn test_set_target_power_output_repairing_generator() {
         let tick_context = setup_test_environment(1.0, 100.0, 10.0);
         let mut reactor = Reactor {
-            generator: State::Repairing {
+            state: State::Repairing {
                 event_end: Time::new::<second>(10.0),
             },
             target_power_output: Power::new::<kilowatt>(50.0),
@@ -160,7 +168,7 @@ mod tests {
     fn test_tick_generator_offline_ramps_down_power() {
         let tick_context = setup_test_environment(1.0, 100.0, 10.0);
         let mut reactor = Reactor {
-            generator: State::Offline,
+            state: State::Offline,
             power_output: Power::new::<kilowatt>(50.0),
             target_power_output: Power::new::<kilowatt>(50.0),
             ..Default::default()
@@ -182,7 +190,7 @@ mod tests {
         let mut tick_context = setup_test_environment(1.0, 100.0, 10.0);
         tick_context.mission_time = Time::new::<second>(0.0);
         let mut reactor = Reactor {
-            generator: State::Repairing {
+            state: State::Repairing {
                 event_end: Time::new::<second>(100.0),
             },
             power_output: Power::new::<kilowatt>(30.0),
@@ -206,7 +214,7 @@ mod tests {
     fn test_tick_online_mode_ramps_up_to_target() {
         let tick_context = setup_test_environment(1.0, 100.0, 10.0);
         let mut reactor = Reactor {
-            generator: State::Online {
+            state: State::Online {
                 damage: Damage::default(),
             },
             power_output: Power::new::<kilowatt>(30.0),
@@ -230,7 +238,7 @@ mod tests {
     fn test_tick_online_mode_ramps_down_to_target() {
         let tick_context = setup_test_environment(1.0, 100.0, 10.0);
         let mut reactor = Reactor {
-            generator: State::Online {
+            state: State::Online {
                 damage: Damage::default(),
             },
             power_output: Power::new::<kilowatt>(80.0),
@@ -252,7 +260,7 @@ mod tests {
     fn test_tick_online_mode_target_zero_ramps_down() {
         let tick_context = setup_test_environment(1.0, 100.0, 20.0);
         let mut reactor = Reactor {
-            generator: State::Online {
+            state: State::Online {
                 damage: Damage::default(),
             },
             power_output: Power::new::<kilowatt>(50.0),

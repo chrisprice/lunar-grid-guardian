@@ -16,65 +16,69 @@ pub struct GameVariables {
     pub system_nominal_power_pnom: Power,
     /// Nominal System Frequency (Hertz)
     pub nominal_frequency: Frequency,
-    /// Mission Timer - Scaling Factor
+    /// Lunar Time to Mission Time Ratio
     pub mission_time_per_lunar_time: Ratio,
-    /// Repair Duration
+    /// Repair Time (seconds)
     pub repair_time: Time,
-    /// Solar Array - Nominal Output (Power units)
+    /// Solar Nominal Output (Power units)
     pub solar_nominal_output: Power,
-    /// Battery Capacity (kWh)
+    /// Battery Capacity (Energy units)
     pub battery_capacity: Energy,
-    /// Reactor - Nominal Output (Power units)
+    /// Reactor Nominal Output (Power units)
     pub reactor_nominal_output: Power,
-    /// Reactor - Power Ramp Rate
+    /// Reactor Power Ramp Rate (PowerRate units)
     pub reactor_power_ramp_rate: PowerRate,
-    /// Reactor Max Coolant Energy Capacity (e.g., kWh)
+    /// Reactor Max Coolant Energy Capacity (Energy units)
     pub reactor_max_coolant_energy_capacity: Energy,
-    /// Reactor Coolant Recharge Rate (e.g., kW)
+    /// Reactor Coolant Recharge Rate (Power units)
     pub reactor_coolant_recharge_rate: Power,
-    /// Reactor Coolant Effectiveness Reduction Rate (% effectiveness loss per % reactor damage)
+    /// Coolant Effectiveness Reduction Rate (percentage)
     pub coolant_effectiveness_reduction_rate: Ratio,
-    /// Reactor Thermal Efficiency Factor (Ratio, e.g., 0.8 means 80% efficient, 20% waste heat)
+    /// Reactor Thermal Efficiency Factor (percentage)
     pub reactor_thermal_efficiency_factor: Ratio,
-    /// Reactor Critical Thermal Energy (e.g., kWh)
+    /// Reactor Critical Thermal Energy (Energy units)
     pub reactor_critical_thermal_energy: Energy,
-    /// Life Support - Colony Damage Increase Rate (per second)
+    /// Colony Damage Rate (emergency, percentage)
     pub colony_damage_rate_emergency: Ratio,
-    /// Life Support - Colony Damage Repair Rate (per second)
+    /// Colony Damage Repair Rate (percentage)
     pub colony_damage_repair_rate: Ratio,
-    /// Life Support - Base Power Demand (Power units)
+    /// Life Support Base Power Demand (Power units)
     pub life_support_base_power_demand: Power,
-    /// Life Support - Power Demand Increase Rate (ticks once per day))
+    /// Life Support Power Demand Increase (PowerRate units)
     pub life_support_power_demand_increase: PowerRate,
-    /// Comms - Power Demand (Power units)
+    /// Communications Power Demand (Power units)
     pub comms_power_demand: Power,
-    /// Micrometeorite Damage (to unshielded Solar) (damage %)
+    /// Micrometeorite Damage to Solar Array (percentage)
     pub micrometeorite_damage_solar: Ratio,
-    /// Lunar Quake Damage (to Reactor) (damage %)
+    /// Lunar Quake Damage to Reactor (percentage)
     pub lunar_quake_damage_reactor: Ratio,
-    /// Lunar Quake Damage (to Batteries) (damage %)
+    /// Lunar Quake Damage to Battery (percentage)
     pub lunar_quake_damage_battery: Ratio,
-    /// Solar Flare Damage (to unshielded Solar Arrays) (damage %)
+    /// Solar Flare Damage to Solar Array (percentage)
     pub solar_flare_damage_solar_array: Ratio,
-    /// Solar Flare Power Spike Damage (to Batteries via Solar Arrays) (damage %)
+    /// Solar Flare Spike Damage to Battery (percentage)
     pub solar_flare_spike_damage_battery: Ratio,
-    /// Operations - Base Power Demand (Power units)
+    /// Operations Base Power Demand (Power units)
     pub operations_base_power_demand: Power,
-    /// Operations - Docking Power Spike Magnitude (Power units)
+    /// Operations Docking Spike Power (Power units)
     pub operations_docking_spike_power: Power,
-    /// Supply Drop - Timer Interval (seconds)
+    /// Supply Drop Interval (seconds)
     pub supply_drop_interval: Time,
-    /// Supply Drop - Docking Duration (seconds)
+    /// Supply Drop Docking Duration (seconds)
     pub supply_drop_docking_duration: Time,
+    /// Boost to Life Support Amount (percentage)
     pub boost_life_support_amount: Ratio,
+    /// Boost to Battery Amount (Energy units)
     pub boost_battery_amount: Energy,
+    /// Boost to Coolant Energy Capacity (Energy units)
     pub boost_coolant_energy_capacity: Energy,
+    /// Boost to Repair Amount (percentage)
     pub boost_repair_amount: Ratio,
-    /// Probability of a micrometeorite event occurring per tick.
+    /// Micrometeorite Event Probability (percentage)
     pub micrometeorite_event_probability: Ratio,
-    /// Probability of a lunar quake event occurring per tick.
+    /// Lunar Quake Event Probability (percentage)
     pub lunar_quake_event_probability: Ratio,
-    /// Probability of a solar flare event occurring per tick.
+    /// Solar Flare Event Probability (percentage)
     pub solar_flare_event_probability: Ratio,
     /// Event Duration (seconds)
     pub event_duration: Time,

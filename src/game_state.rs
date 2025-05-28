@@ -1,5 +1,6 @@
 use crate::event::Event;
 use crate::game_variables::GameVariables;
+use crate::rng;
 use crate::system::battery::Battery;
 use crate::system::battery::BatteryMode;
 use crate::system::communications::Communications;
@@ -8,7 +9,6 @@ use crate::system::operations::Operations;
 use crate::system::reactor::Reactor;
 use crate::system::solar::Solar;
 use crate::tick_context::TickContext;
-use crate::rng;
 use rand::Rng;
 use uom::ConstZero;
 use uom::si::f32::{Frequency, Power, Time};
@@ -16,39 +16,36 @@ use uom::si::frequency::hertz;
 use uom::si::time::second;
 
 pub struct GameState<'a> {
-    /// Game variables for the current game.
-    pub game_vars: &'a GameVariables,
+    game_vars: &'a GameVariables,
 
-    /// Real time since the start of the mission.
-    pub mission_time: Time,
-    /// Last tick time since the start of the mission.
-    pub last_tick_time: Time,
+    mission_time: Time,
+    last_tick_time: Time,
 
     // Grid metrics
-    pub total_grid_supply: Power,
-    pub total_grid_demand: Power,
-    pub frequency_hz: Frequency,
+    total_grid_supply: Power,
+    total_grid_demand: Power,
+    frequency_hz: Frequency,
 
     // Supply
-    pub solar: Solar,
-    pub battery: Battery,
-    pub reactor: Reactor,
+    solar: Solar,
+    battery: Battery,
+    reactor: Reactor,
 
     // Demand
-    pub life_support: LifeSupport,
-    pub operations: Operations,
-    pub comms: Communications,
+    life_support: LifeSupport,
+    operations: Operations,
+    comms: Communications,
 
     // Boosts
-    pub boost_life_support: u32,
-    pub boost_battery: u32,
-    pub boost_coolant: u32,
-    pub boost_repair: u32,
+    boost_life_support: u32,
+    boost_battery: u32,
+    boost_coolant: u32,
+    boost_repair: u32,
 
     // Events
-    pub micrometeorite: Event,
-    pub lunar_quake: Event,
-    pub solar_flare: Event,
+    micrometeorite: Event,
+    lunar_quake: Event,
+    solar_flare: Event,
 }
 
 impl<'a> GameState<'a> {
@@ -132,15 +129,12 @@ impl<'a> GameState<'a> {
         }
         if self.lunar_quake.tick(context) {
             self.battery
-                .generator
                 .damage(self.game_vars.lunar_quake_damage_battery);
             self.reactor
-                .generator
                 .damage(self.game_vars.lunar_quake_damage_reactor);
         }
         if self.solar_flare.tick(context) {
             self.battery
-                .generator
                 .damage(self.game_vars.solar_flare_spike_damage_battery);
             self.solar
                 .damage(self.game_vars.solar_flare_damage_solar_array);
@@ -216,9 +210,9 @@ impl<'a> GameState<'a> {
     pub fn use_repair_boost(&mut self) {
         if self.boost_repair > 0 {
             self.boost_repair -= 1;
-            self.battery.generator.boost(self.game_vars);
-            self.reactor.generator.boost(self.game_vars);
-            self.solar.generator.boost(self.game_vars);
+            self.battery.repair_boost(self.game_vars);
+            self.reactor.repair_boost(self.game_vars);
+            self.solar.repair_boost(self.game_vars);
         }
     }
 
@@ -252,5 +246,10 @@ impl<'a> GameState<'a> {
     /// Sets the operating mode for the battery (Auto, Charge, Discharge).
     pub fn set_battery_mode(&mut self, mode: BatteryMode) {
         self.battery.set_mode(mode);
+    }
+
+    /// Returns the current mission time.
+    pub fn mission_time(&self) -> Time {
+        self.mission_time
     }
 }

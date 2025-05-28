@@ -12,8 +12,8 @@ pub enum EventState {
 }
 
 pub struct Event {
-    pub state: EventState,
-    pub probability: Ratio,
+    state: EventState,
+    probability: Ratio,
 }
 
 impl Event {
