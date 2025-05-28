@@ -28,9 +28,9 @@ pub struct GameVariables {
     pub reactor_nominal_output: Power,
     /// Reactor Power Ramp Rate (PowerRate units)
     pub reactor_power_ramp_rate: PowerRate,
-    /// Reactor Max Coolant Energy Capacity (Energy units)
-    pub reactor_max_coolant_energy_capacity: Energy,
-    /// Reactor Coolant Recharge Rate (Power units)
+    /// Reactor Max Coolant Available (e.g., kWh)
+    pub reactor_max_coolant_available: Energy,
+    /// Reactor Coolant Recharge Rate (e.g., kW)
     pub reactor_coolant_recharge_rate: Power,
     /// Coolant Effectiveness Reduction Rate (percentage)
     pub coolant_effectiveness_reduction_rate: Ratio,
@@ -98,7 +98,7 @@ impl Default for GameVariables {
             battery_capacity: Energy::new::<kilowatt_hour>(200.0),
             reactor_nominal_output: Power::new::<watt>(500.0),
             reactor_power_ramp_rate: PowerRate::new::<watt_per_second>(10.0),
-            reactor_max_coolant_energy_capacity: Energy::new::<kilowatt_hour>(50.0),
+            reactor_max_coolant_available: Energy::new::<kilowatt_hour>(50.0),
             reactor_coolant_recharge_rate: Power::new::<watt>(10000.0), // 10kW
             coolant_effectiveness_reduction_rate: Ratio::new::<percent>(0.5),
             reactor_thermal_efficiency_factor: Ratio::new::<percent>(80.0),

@@ -8,7 +8,7 @@ use uom::si::f32::{Energy, Power, Ratio};
 #[derive(Debug, Default)]
 pub struct Reactor {
     core_thermal_energy: Energy,
-    coolant_energy_absorption_capacity: Energy,
+    coolant_available: Energy,
     state: State,
     power_output: Power,
     target_power_output: Power,
@@ -43,13 +43,12 @@ impl Reactor {
                 self.core_thermal_energy += waste_heat_energy * context.tick_delta;
 
                 let coolant_used: Energy = damage
-                    .apply(self.coolant_energy_absorption_capacity)
+                    .apply(self.coolant_available)
                     .min(self.core_thermal_energy);
 
                 self.core_thermal_energy =
                     (self.core_thermal_energy - coolant_used).max(Energy::ZERO);
-                self.coolant_energy_absorption_capacity =
-                    (self.coolant_energy_absorption_capacity - coolant_used).max(Energy::ZERO);
+                self.coolant_available = (self.coolant_available - coolant_used).max(Energy::ZERO);
 
                 if self.core_thermal_energy >= context.game_vars.reactor_critical_thermal_energy {
                     self.state = State::Offline;
@@ -63,17 +62,18 @@ impl Reactor {
             }
         };
 
-        let coolant_energy_absorption_capacity = self.coolant_energy_absorption_capacity
+        let coolant_available = self.coolant_available
             + context.game_vars.reactor_coolant_recharge_rate * context.tick_delta;
-        self.coolant_energy_absorption_capacity = coolant_energy_absorption_capacity
-            .min(context.game_vars.reactor_max_coolant_energy_capacity)
+        self.coolant_available = coolant_available
+            .min(context.game_vars.reactor_max_coolant_available)
             .max(Energy::ZERO);
 
         self.power_output
     }
 
     pub fn boost(&mut self, game_vars: &GameVariables) {
-        self.coolant_energy_absorption_capacity += game_vars.boost_coolant_energy_capacity;
+        self.coolant_available = (self.coolant_available + game_vars.boost_coolant_energy_capacity)
+            .min(game_vars.reactor_max_coolant_available);
     }
 
     pub fn damage(&mut self, amount: Ratio) {
@@ -92,9 +92,11 @@ mod tests {
     use crate::game_variables::GameVariables;
     use crate::test::assert_quantities_eq;
     use crate::tick_context::TickContext;
+    use uom::si::energy::{joule, kilowatt_hour};
     use uom::si::f32::{Power, PowerRate, Time};
     use uom::si::power::kilowatt;
     use uom::si::power_rate::kilowatt_per_second;
+    use uom::si::ratio::percent;
     use uom::si::time::second;
 
     fn setup_test_environment(
@@ -120,7 +122,7 @@ mod tests {
     }
 
     #[test]
-    fn test_set_target_power_output_online_generator() {
+    fn test_set_target_power_output_online_state() {
         let tick_context = setup_test_environment(1.0, 100.0, 10.0);
         let mut reactor = Reactor {
             state: State::Online {
@@ -139,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn test_set_target_power_output_offline_generator() {
+    fn test_set_target_power_output_offline_state() {
         let tick_context = setup_test_environment(1.0, 100.0, 10.0);
         let mut reactor = Reactor {
             state: State::Offline,
@@ -151,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn test_set_target_power_output_repairing_generator() {
+    fn test_set_target_power_output_repairing_state() {
         let tick_context = setup_test_environment(1.0, 100.0, 10.0);
         let mut reactor = Reactor {
             state: State::Repairing {
@@ -165,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tick_generator_offline_ramps_down_power() {
+    fn test_tick_state_offline_ramps_down_power() {
         let tick_context = setup_test_environment(1.0, 100.0, 10.0);
         let mut reactor = Reactor {
             state: State::Offline,
@@ -186,7 +188,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tick_generator_repairing_ramps_down_power() {
+    fn test_tick_state_repairing_ramps_down_power() {
         let mut tick_context = setup_test_environment(1.0, 100.0, 10.0);
         tick_context.mission_time = Time::new::<second>(0.0);
         let mut reactor = Reactor {
@@ -264,6 +266,7 @@ mod tests {
                 damage: Damage::default(),
             },
             power_output: Power::new::<kilowatt>(50.0),
+            coolant_available: Energy::new::<kilowatt_hour>(10.0),
             ..Default::default()
         };
         reactor.set_target_power_output(Power::new::<kilowatt>(0.0), tick_context.game_vars);
@@ -276,5 +279,176 @@ mod tests {
         assert_quantities_eq(reactor.power_output, 0.0);
         reactor.tick(&tick_context);
         assert_quantities_eq(reactor.power_output, 0.0);
+    }
+
+    #[test]
+    fn test_coolant_consumed_when_online() {
+        let mut tick_context = setup_test_environment(1.0, 100.0, 10.0);
+        let initial_coolant = Energy::new::<kilowatt_hour>(20.0);
+        let mut reactor = Reactor {
+            state: State::Online {
+                damage: Damage::default(),
+            },
+            power_output: Power::new::<kilowatt>(50.0),
+            target_power_output: Power::new::<kilowatt>(50.0),
+            coolant_available: initial_coolant,
+            core_thermal_energy: Energy::ZERO, // Changed from 1.0 kWh
+            ..Default::default()
+        };
+
+        let mut game_vars = (*tick_context.game_vars).clone();
+        game_vars.reactor_thermal_efficiency_factor = Ratio::new::<percent>(80.0);
+        game_vars.reactor_coolant_recharge_rate = Power::ZERO;
+        tick_context.game_vars = &game_vars;
+
+        reactor.tick(&tick_context);
+        let expected_coolant_consumed = Power::new::<kilowatt>(50.0)
+            * (Ratio::ONE - game_vars.reactor_thermal_efficiency_factor)
+            * tick_context.tick_delta;
+        assert_quantities_eq(
+            reactor.coolant_available,
+            (initial_coolant - expected_coolant_consumed).value,
+        );
+    }
+
+    #[test]
+    fn test_coolant_recharges_over_time() {
+        let mut tick_context = setup_test_environment(1.0, 100.0, 10.0);
+        let initial_coolant = Energy::new::<kilowatt_hour>(5.0);
+        let mut reactor = Reactor {
+            state: State::Offline,
+            coolant_available: initial_coolant,
+            ..Default::default()
+        };
+
+        let mut game_vars = (*tick_context.game_vars).clone();
+        game_vars.reactor_coolant_recharge_rate = Power::new::<kilowatt>(1.0);
+        game_vars.reactor_max_coolant_available = Energy::new::<kilowatt_hour>(10.0);
+        tick_context.game_vars = &game_vars;
+
+        reactor.tick(&tick_context);
+        let expected_recharge_amount =
+            game_vars.reactor_coolant_recharge_rate * tick_context.tick_delta;
+        assert_quantities_eq(
+            reactor.coolant_available,
+            (initial_coolant + expected_recharge_amount).value,
+        );
+    }
+
+    #[test]
+    fn test_coolant_recharge_capped_by_max() {
+        let mut tick_context = setup_test_environment(1.0, 100.0, 10.0);
+        let max_coolant = Energy::new::<kilowatt_hour>(10.0);
+        let initial_coolant = max_coolant - Energy::new::<joule>(100.0);
+
+        let mut reactor = Reactor {
+            state: State::Offline,
+            coolant_available: initial_coolant,
+            ..Default::default()
+        };
+
+        let mut game_vars = (*tick_context.game_vars).clone();
+        game_vars.reactor_coolant_recharge_rate = Power::new::<kilowatt>(2.0);
+        game_vars.reactor_max_coolant_available = max_coolant;
+        tick_context.game_vars = &game_vars;
+
+        reactor.tick(&tick_context);
+        assert_quantities_eq(reactor.coolant_available, max_coolant.value);
+    }
+
+    #[test]
+    fn test_boost_increases_coolant() {
+        let tick_context = setup_test_environment(1.0, 100.0, 10.0);
+        let initial_coolant = Energy::new::<kilowatt_hour>(5.0);
+        let mut reactor = Reactor {
+            coolant_available: initial_coolant,
+            ..Default::default()
+        };
+
+        let mut game_vars = (*tick_context.game_vars).clone();
+        let boost_amount = Energy::new::<kilowatt_hour>(10.0);
+        game_vars.boost_coolant_energy_capacity = boost_amount;
+        game_vars.reactor_max_coolant_available = Energy::new::<kilowatt_hour>(100.0);
+
+        reactor.boost(&game_vars);
+        assert_quantities_eq(
+            reactor.coolant_available,
+            (initial_coolant + boost_amount).value,
+        );
+    }
+
+    #[test]
+    fn test_boost_is_capped_by_max_coolant() {
+        let tick_context = setup_test_environment(1.0, 100.0, 10.0);
+        let max_coolant = Energy::new::<kilowatt_hour>(20.0);
+        let initial_coolant = max_coolant - Energy::new::<joule>(100.0); // Slightly less than max
+        let mut reactor = Reactor {
+            coolant_available: initial_coolant,
+            ..Default::default()
+        };
+
+        let mut game_vars = (*tick_context.game_vars).clone();
+        let boost_amount = Energy::new::<kilowatt_hour>(10.0); // Boost would exceed max if not capped
+        game_vars.boost_coolant_energy_capacity = boost_amount;
+        game_vars.reactor_max_coolant_available = max_coolant;
+
+        reactor.boost(&game_vars);
+        assert_quantities_eq(reactor.coolant_available, max_coolant.value);
+    }
+
+    #[test]
+    fn test_boost_does_not_exceed_max_coolant_when_at_max() {
+        let tick_context = setup_test_environment(1.0, 100.0, 10.0);
+        let max_coolant = Energy::new::<kilowatt_hour>(20.0);
+        let mut reactor = Reactor {
+            coolant_available: max_coolant, // Start at max coolant
+            ..Default::default()
+        };
+
+        let mut game_vars = (*tick_context.game_vars).clone();
+        let boost_amount = Energy::new::<kilowatt_hour>(10.0);
+        game_vars.boost_coolant_energy_capacity = boost_amount;
+        game_vars.reactor_max_coolant_available = max_coolant;
+
+        reactor.boost(&game_vars);
+        assert_quantities_eq(reactor.coolant_available, max_coolant.value);
+    }
+
+    #[test]
+    fn test_coolant_does_not_change_when_offline_and_no_recharge() {
+        let mut tick_context = setup_test_environment(1.0, 100.0, 10.0);
+        let initial_coolant = Energy::new::<kilowatt_hour>(10.0);
+        let mut reactor = Reactor {
+            state: State::Offline,
+            coolant_available: initial_coolant,
+            ..Default::default()
+        };
+
+        let mut game_vars = (*tick_context.game_vars).clone();
+        game_vars.reactor_coolant_recharge_rate = Power::ZERO;
+        tick_context.game_vars = &game_vars;
+
+        reactor.tick(&tick_context);
+        assert_quantities_eq(reactor.coolant_available, initial_coolant.value);
+    }
+
+    #[test]
+    fn test_coolant_does_not_change_when_repairing_and_no_recharge() {
+        let mut tick_context = setup_test_environment(1.0, 100.0, 10.0);
+        let initial_coolant = Energy::new::<kilowatt_hour>(10.0);
+        let mut reactor = Reactor {
+            state: State::Repairing {
+                event_end: Time::new::<second>(100.0),
+            },
+            coolant_available: initial_coolant,
+            ..Default::default()
+        };
+
+        let mut game_vars = (*tick_context.game_vars).clone();
+        game_vars.reactor_coolant_recharge_rate = Power::ZERO;
+        tick_context.game_vars = &game_vars;
+
+        reactor.tick(&tick_context);
+        assert_quantities_eq(reactor.coolant_available, initial_coolant.value);
     }
 }
