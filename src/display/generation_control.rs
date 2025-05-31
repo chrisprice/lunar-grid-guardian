@@ -1,19 +1,21 @@
+use uom::si::f32::{Ratio, Time};
+
 pub struct Battery {
-    pub charge: u8,
-    pub damage: u8,
+    pub charge: Ratio,
+    pub damage: Ratio,
 }
 
 pub struct Reactor {
-    pub power: u8,
-    pub coolant: u8,
-    pub damage: u8,
+    pub power: Ratio,
+    pub coolant: Ratio,
+    pub damage: Ratio,
 }
 
 pub struct Solar {
-    pub power: u8,
-    pub damage: u8,
-    pub sunrise_countdown: u8,
-    pub sunset_countdown: u8,
+    pub power: Ratio,
+    pub damage: Ratio,
+    pub sunrise_countdown: Time,
+    pub sunset_countdown: Time,
     pub solar_shields_active: bool,
 }
 
