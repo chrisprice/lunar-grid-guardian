@@ -1,3 +1,4 @@
+use crate::ConstOne;
 use crate::event::Event;
 use crate::game_variables::GameVariables;
 use crate::rng;
@@ -11,6 +12,7 @@ use crate::system::solar::Solar;
 use crate::tick_context::TickContext;
 use rand::Rng;
 use uom::ConstZero;
+use uom::si::f32::Ratio;
 use uom::si::f32::{Frequency, Power, Time};
 use uom::si::frequency::hertz;
 use uom::si::time::second;
@@ -22,9 +24,9 @@ pub struct GameState<'a> {
     last_tick_time: Time,
 
     // Grid metrics
-    total_grid_supply: Power,
-    total_grid_demand: Power,
-    frequency_hz: Frequency,
+    grid_supply: Power,
+    grid_demand: Power,
+    grid_frequency: Frequency,
 
     // Supply
     solar: Solar,
@@ -55,9 +57,9 @@ impl<'a> GameState<'a> {
             game_vars,
             mission_time: Time::ZERO,
             last_tick_time: Time::ZERO,
-            total_grid_supply: Power::ZERO,
-            total_grid_demand: Power::ZERO,
-            frequency_hz: game_vars.nominal_frequency,
+            grid_supply: Power::ZERO,
+            grid_demand: Power::ZERO,
+            grid_frequency: game_vars.nominal_frequency,
             solar: Solar::default(),
             battery: Battery::default(),
             reactor: Reactor::default(),
@@ -87,7 +89,7 @@ impl<'a> GameState<'a> {
 
     /// Derives the next frequency_hz value based on the swing equation and current state.
     pub fn tick_frequency_hz(&self) -> Frequency {
-        let power_imbalance = self.total_grid_supply - self.total_grid_demand;
+        let power_imbalance = self.grid_supply - self.grid_demand;
         let delta_p = power_imbalance;
         let h = self.game_vars.system_inertia_h;
         let pnom = self.game_vars.system_nominal_power_pnom;
@@ -108,7 +110,7 @@ impl<'a> GameState<'a> {
         } else {
             0.0 // Or handle as an error/log, but for tick logic, 0 duration is safer
         };
-        self.frequency_hz + rocof * tick_duration_seconds
+        self.grid_frequency + rocof * tick_duration_seconds
     }
 
     /// Advances the game state by one tick.
@@ -140,7 +142,7 @@ impl<'a> GameState<'a> {
                 .damage(self.game_vars.solar_flare_damage_solar_array);
         }
 
-        self.total_grid_demand = {
+        self.grid_demand = {
             let comms_power_demand = self.comms.tick(context);
             let life_support_power_demand = self.life_support.tick(context);
 
@@ -152,7 +154,7 @@ impl<'a> GameState<'a> {
             operations_result.power_consumed + life_support_power_demand + comms_power_demand
         };
 
-        self.total_grid_supply = {
+        self.grid_supply = {
             let solar_power = self.solar.tick(context);
             let reactor_output = self.reactor.tick(context);
 
@@ -160,14 +162,14 @@ impl<'a> GameState<'a> {
         };
 
         // Battery
-        let power_imbalance = self.total_grid_supply - self.total_grid_demand;
+        let power_imbalance = self.grid_supply - self.grid_demand;
         let power_consumed_by_battery = self.battery.tick(context, power_imbalance);
         if power_consumed_by_battery.value > 0.0 {
-            self.total_grid_demand += power_consumed_by_battery;
+            self.grid_demand += power_consumed_by_battery;
         } else if power_consumed_by_battery.value < 0.0 {
-            self.total_grid_supply += -power_consumed_by_battery; // Add the absolute value
+            self.grid_supply += -power_consumed_by_battery; // Add the absolute value
         }
-        self.frequency_hz = self.tick_frequency_hz();
+        self.grid_frequency = self.tick_frequency_hz();
 
         self.last_tick_time = self.mission_time;
     }
@@ -251,5 +253,15 @@ impl<'a> GameState<'a> {
     /// Returns the current mission time.
     pub fn mission_time(&self) -> Time {
         self.mission_time
+    }
+
+    pub fn display(&self) -> crate::display::grid_overview::GridOverview {
+        crate::display::grid_overview::GridOverview {
+            total_grid_demand: self.grid_demand,
+            total_grid_supply: self.grid_supply,
+            frequency: self.grid_frequency,
+            colony_health: Ratio::ONE - self.life_support.colony_damage().inner(),
+            mission_timer: self.mission_time,
+        }
     }
 }
