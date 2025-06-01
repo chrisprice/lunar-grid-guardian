@@ -73,6 +73,16 @@ impl Battery {
         transfered / context.tick_delta
     }
 
+    pub fn display(
+        &self,
+        game_vars: &GameVariables,
+    ) -> crate::display::generation_control::Battery {
+        crate::display::generation_control::Battery {
+            charge: self.charge / game_vars.battery_capacity,
+            damage: self.state.effective_damage(),
+        }
+    }
+
     pub fn boost(&mut self, game_vars: &GameVariables) {
         if let State::Online { damage } = &self.state {
             let effective_capacity: Energy = damage.apply(game_vars.battery_capacity);

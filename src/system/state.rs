@@ -1,3 +1,4 @@
+use crate::ConstOne;
 use crate::damage::Damage;
 use crate::game_variables::GameVariables;
 use crate::tick_context::TickContext;
@@ -61,6 +62,14 @@ impl State {
                     damage: Damage::default(),
                 };
             }
+        }
+    }
+
+    pub fn effective_damage(&self) -> Ratio {
+        match self {
+            State::Online { damage } => damage.inner(),
+            State::Offline => Ratio::ONE,
+            State::Repairing { .. } => todo!("Handle repairing state effective damage"),
         }
     }
 }

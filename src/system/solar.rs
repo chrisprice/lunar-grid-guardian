@@ -11,6 +11,7 @@ use uom::si::ratio::ratio;
 pub struct Solar {
     state: State,
     shields_active: bool,
+    lunar_phase: LunarPhase,
 }
 
 impl Solar {
@@ -18,21 +19,33 @@ impl Solar {
     /// Returns the amount of power generated.
     pub fn tick(&mut self, context: &TickContext) -> Power {
         self.state.tick(context);
+        self.lunar_phase = LunarPhase::from_tick_context(context);
 
         let State::Online { damage } = &self.state else {
             return Power::ZERO;
         };
 
-        let lunar_phase = LunarPhase::from_tick_context(context);
+        let current_potential_power =
+            context.game_vars.solar_nominal_output * self.solar_intensity();
+        damage.apply(current_potential_power)
+    }
 
-        match lunar_phase {
+    fn solar_intensity(&self) -> Ratio {
+        match self.lunar_phase {
             LunarPhase::Day { .. } if !self.shields_active => {
-                let intensity_factor = (lunar_phase.elapsed_ratio().get::<ratio>() * PI).sin();
-                let current_potential_power =
-                    context.game_vars.solar_nominal_output * intensity_factor;
-                damage.apply(current_potential_power)
+                Ratio::new::<ratio>((self.lunar_phase.elapsed_ratio().get::<ratio>() * PI).sin())
             }
-            LunarPhase::Day { .. } | LunarPhase::Night { .. } => Power::ZERO,
+            _ => Ratio::ZERO,
+        }
+    }
+
+    pub fn display(&self) -> crate::display::generation_control::Solar {
+        crate::display::generation_control::Solar {
+            power: self.solar_intensity(),
+            damage: self.state.effective_damage(),
+            sunrise_countdown: self.lunar_phase.time_to_sunrise(),
+            sunset_countdown: self.lunar_phase.time_to_sunset(),
+            solar_shields_active: self.shields_active,
         }
     }
 
@@ -74,6 +87,7 @@ mod tests {
                 damage: Damage::new(Ratio::new::<ratio>(damage_value)),
             },
             shields_active,
+            lunar_phase: LunarPhase::default(),
         }
     }
 
@@ -229,6 +243,7 @@ mod tests {
         let mut solar = Solar {
             state: State::Offline,
             shields_active: false,
+            lunar_phase: LunarPhase::default(),
         };
         let power = solar.tick(&context);
         assert_power_approx_eq(power, 0.0, 1e-6, "Power with generator offline");

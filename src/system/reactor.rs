@@ -71,6 +71,14 @@ impl Reactor {
         self.power_output
     }
 
+    pub fn display(&self, game_vars: &GameVariables) -> crate::display::generation_control::Reactor {
+        crate::display::generation_control::Reactor {
+            power: self.power_output / game_vars.reactor_nominal_output,
+            coolant: self.coolant_available / game_vars.reactor_max_coolant_available,
+            damage: self.state.effective_damage(),
+        }
+    }
+
     pub fn boost(&mut self, game_vars: &GameVariables) {
         self.coolant_available = (self.coolant_available + game_vars.boost_coolant_amount)
             .min(game_vars.reactor_max_coolant_available);

@@ -17,9 +17,18 @@ pub const LUNAR_PHASE_DURATION: Time = Time {
 
 /// Represents the current lunar phase and time in cycle.
 /// N.B. The elapsed time is scaled.
+#[derive(Debug)]
 pub enum LunarPhase {
     Day { elapsed: Time },
     Night { elapsed: Time },
+}
+
+impl Default for LunarPhase {
+    fn default() -> Self {
+        LunarPhase::Night {
+            elapsed: Default::default(),
+        }
+    }
 }
 
 impl LunarPhase {
@@ -49,6 +58,20 @@ impl LunarPhase {
             LunarPhase::Day { elapsed } | LunarPhase::Night { elapsed } => {
                 *elapsed / LUNAR_PHASE_DURATION
             }
+        }
+    }
+
+    pub fn time_to_sunrise(&self) -> Time {
+        match self {
+            LunarPhase::Day { .. } => uom::ConstZero::ZERO,
+            LunarPhase::Night { .. } => self.remaining_time(),
+        }
+    }
+
+    pub fn time_to_sunset(&self) -> Time {
+        match self {
+            LunarPhase::Day { .. } => self.remaining_time(),
+            LunarPhase::Night { .. } => uom::ConstZero::ZERO,
         }
     }
 }
