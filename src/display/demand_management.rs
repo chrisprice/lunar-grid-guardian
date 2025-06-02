@@ -21,10 +21,6 @@ pub struct CommsDisplay {
 
 pub struct OperationsDisplay {
     pub power_level: Power,
-    pub life_support_boost_count: u32,
-    pub battery_boost_count: u32,
-    pub coolant_boost_count: u32,
-    pub repair_boost_count: u32,
     pub online_status: bool,
     pub pending_docking_indicator: bool,
     pub next_supply_drop_timer: Time,
