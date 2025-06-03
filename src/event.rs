@@ -1,9 +1,10 @@
+use crate::display::demand_management::EventAlertStatus;
 use crate::rng;
 use crate::tick_context::TickContext;
 use rand::Rng;
 use uom::si::f32::{Ratio, Time};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug)]
 pub enum EventState {
     Dormant,
     Scheduled { event_start: Time },
@@ -53,6 +54,16 @@ impl Event {
             EventState::Scheduled { .. }
             | EventState::Acknowledged { .. }
             | EventState::Impacting { .. } => false,
+        }
+    }
+}
+
+impl From<&Event> for EventAlertStatus {
+    fn from(event: &Event) -> Self {
+        match event.state {
+            EventState::Scheduled { .. } => EventAlertStatus::UnacknowledgedAlert,
+            EventState::Acknowledged { .. } | EventState::Impacting { .. } => EventAlertStatus::AcknowledgedAlert,
+            EventState::Dormant => EventAlertStatus::NoAlert,
         }
     }
 }
