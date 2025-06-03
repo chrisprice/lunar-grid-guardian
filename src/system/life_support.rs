@@ -50,6 +50,14 @@ impl LifeSupport {
     pub fn colony_damage(&self) -> &Damage {
         &self.colony_damage
     }
+
+    pub fn display(&self, power_level: Power) -> crate::display::demand_management::LifeSupportDisplay {
+        crate::display::demand_management::LifeSupportDisplay {
+            power_level,
+            colony_damage: self.colony_damage.inner(),
+            emergency_restrictions_status: self.emergency_restrictions,
+        }
+    }
 }
 
 #[cfg(test)]
