@@ -93,7 +93,7 @@ impl Operations {
         self.offline = !online;
     }
 
-    pub fn display(&self, life_support_boost_count: u32, battery_boost_count: u32, coolant_boost_count: u32, repair_boost_count: u32) -> OperationsDisplay {
+    pub fn display(&self) -> OperationsDisplay {
         let pending_docking_indicator = match self.supply_drop {
             SupplyDrop::AwaitingAuthorization => true,
             _ => false,
@@ -109,10 +109,6 @@ impl Operations {
             online_status: !self.offline,
             pending_docking_indicator,
             next_supply_drop_timer,
-            life_support_boost_count,
-            battery_boost_count,
-            coolant_boost_count,
-            repair_boost_count,
         }
     }
 }
