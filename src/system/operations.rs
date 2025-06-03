@@ -3,12 +3,15 @@ use uom::ConstZero;
 use uom::si::f32::Power;
 use uom::si::f32::Time;
 
+use crate::display::demand_management::OperationsDisplay;
+
 #[derive(Debug, Default)]
 pub enum SupplyDrop {
     #[default]
     Idle,
     Scheduled {
         event_start: Time,
+        remaining: Time,
     },
     AwaitingAuthorization,
     DockingInProgress {
@@ -20,6 +23,7 @@ pub enum SupplyDrop {
 pub struct Operations {
     pub offline: bool,
     pub supply_drop: SupplyDrop,
+    pub power_level: Power,
 }
 
 pub struct TickResult {
@@ -38,24 +42,31 @@ impl Operations {
             current_power_consumption = context.game_vars.operations_base_power_demand;
         }
 
-        if let SupplyDrop::Scheduled { event_start } = &self.supply_drop {
-            if context.mission_time >= *event_start {
-                self.supply_drop = SupplyDrop::AwaitingAuthorization;
-            }
-        }
-        if let SupplyDrop::DockingInProgress { event_end } = &self.supply_drop {
-            if !self.offline {
-                current_power_consumption += context.game_vars.operations_docking_spike_power;
-                if context.mission_time >= *event_end {
-                    self.supply_drop = SupplyDrop::Idle;
-                    docking_completed = true;
+        match &mut self.supply_drop {
+            SupplyDrop::Scheduled { event_start, remaining } => {
+                if context.mission_time >= *event_start {
+                    self.supply_drop = SupplyDrop::AwaitingAuthorization;
+                } else {
+                    *remaining = *event_start - context.mission_time;
                 }
-            } else {
-                self.supply_drop = SupplyDrop::DockingInProgress {
-                    event_end: *event_end + context.tick_delta,
-                };
             }
+            SupplyDrop::DockingInProgress { event_end } => {
+                if !self.offline {
+                    current_power_consumption += context.game_vars.operations_docking_spike_power;
+                    if context.mission_time >= *event_end {
+                        self.supply_drop = SupplyDrop::Idle;
+                        docking_completed = true;
+                    }
+                } else {
+                    self.supply_drop = SupplyDrop::DockingInProgress {
+                        event_end: *event_end + context.tick_delta,
+                    };
+                }
+            }
+            _ => {}
         }
+
+        self.power_level = current_power_consumption;
 
         TickResult {
             power_consumed: current_power_consumption,
@@ -80,6 +91,29 @@ impl Operations {
 
     pub fn set_online(&mut self, online: bool) {
         self.offline = !online;
+    }
+
+    pub fn display(&self, life_support_boost_count: u32, battery_boost_count: u32, coolant_boost_count: u32, repair_boost_count: u32) -> OperationsDisplay {
+        let pending_docking_indicator = match self.supply_drop {
+            SupplyDrop::AwaitingAuthorization => true,
+            _ => false,
+        };
+
+        let next_supply_drop_timer = match &self.supply_drop {
+            SupplyDrop::Scheduled { remaining, .. } => *remaining,
+            _ => Time::ZERO,
+        };
+
+        OperationsDisplay {
+            power_level: self.power_level,
+            online_status: !self.offline,
+            pending_docking_indicator,
+            next_supply_drop_timer,
+            life_support_boost_count,
+            battery_boost_count,
+            coolant_boost_count,
+            repair_boost_count,
+        }
     }
 }
 
@@ -138,6 +172,7 @@ mod tests {
         let mut ops = Operations {
             supply_drop: SupplyDrop::Scheduled {
                 event_start: Time::new::<second>(100.0),
+                remaining: Time::new::<second>(10.0),
             },
             ..Default::default()
         };
