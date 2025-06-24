@@ -2,6 +2,7 @@ use crate::display::demand_management::EventAlertStatus;
 use crate::rng;
 use crate::tick_context::TickContext;
 use rand::Rng;
+use uom::ConstZero;
 use uom::si::f32::{Ratio, Time};
 
 #[derive(Debug)]
@@ -56,13 +57,40 @@ impl Event {
             | EventState::Impacting { .. } => false,
         }
     }
+
+    /// Returns true if the event is currently impacting.
+    pub fn is_impacting(&self) -> bool {
+        matches!(self.state, EventState::Impacting { .. })
+    }
+
+    /// Returns the time remaining until the scheduled start or end of the event.
+    pub fn countdown(&self, current_time: Time) -> Option<Time> {
+        match self.state {
+            EventState::Scheduled {
+                event_start: event_time,
+            }
+            | EventState::Impacting {
+                event_end: event_time,
+            } => {
+                let remaining = event_time - current_time;
+                if remaining > Time::ZERO {
+                    Some(remaining)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
 }
 
 impl From<&Event> for EventAlertStatus {
     fn from(event: &Event) -> Self {
         match event.state {
             EventState::Scheduled { .. } => EventAlertStatus::UnacknowledgedAlert,
-            EventState::Acknowledged { .. } | EventState::Impacting { .. } => EventAlertStatus::AcknowledgedAlert,
+            EventState::Acknowledged { .. } | EventState::Impacting { .. } => {
+                EventAlertStatus::AcknowledgedAlert
+            }
             EventState::Dormant => EventAlertStatus::NoAlert,
         }
     }

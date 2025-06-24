@@ -255,13 +255,44 @@ impl<'a> GameState<'a> {
         self.mission_time
     }
 
-    pub fn display(&self) -> crate::display::grid_overview::GridOverview {
+    pub fn grid_overview(&self) -> crate::display::grid_overview::GridOverview {
         crate::display::grid_overview::GridOverview {
             total_grid_demand: self.grid_demand,
             total_grid_supply: self.grid_supply,
             frequency: self.grid_frequency,
             colony_health: Ratio::ONE - self.life_support.colony_damage().inner(),
             mission_timer: self.mission_time,
+        }
+    }
+
+    pub fn system_integrity(&self) -> crate::display::system_integrity::SystemIntegrity {
+        let comms_rag_status = self.comms.rag_status();
+        let (micrometeorites_countdown, lunar_quake_countdown, solar_flare_countdown) =
+            match comms_rag_status {
+                crate::display::system_integrity::SystemRAGStatus::Green => (
+                    self.micrometeorite.countdown(self.mission_time),
+                    self.lunar_quake.countdown(self.mission_time),
+                    self.solar_flare.countdown(self.mission_time),
+                ),
+                _ => (None, None, None),
+            };
+        crate::display::system_integrity::SystemIntegrity {
+            micrometeorites_active: self.micrometeorite.is_impacting(),
+            lunar_quake_active: self.lunar_quake.is_impacting(),
+            solar_flare_active: self.solar_flare.is_impacting(),
+            micrometeorites_countdown,
+            lunar_quake_countdown,
+            solar_flare_countdown,
+            solar_rag_status: self.solar.rag_status(),
+            batteries_rag_status: self.battery.rag_status(),
+            reactor_rag_status: self.reactor.rag_status(),
+            life_support_rag_status: self.life_support.rag_status(),
+            comms_rag_status,
+            operations_rag_status: self.operations.rag_status(),
+            life_support_boost_count: self.boost_life_support,
+            battery_boost_count: self.boost_battery,
+            coolant_boost_count: self.boost_coolant,
+            repair_boost_count: self.boost_repair,
         }
     }
 }
