@@ -3,6 +3,7 @@ use uom::si::f32::Power;
 use uom::si::time::day;
 
 use crate::damage::Damage;
+use crate::display::system_integrity::SystemRAGStatus;
 use crate::game_variables::GameVariables;
 use crate::tick_context::TickContext;
 
@@ -56,6 +57,14 @@ impl LifeSupport {
             power_level,
             colony_damage: self.colony_damage.inner(),
             emergency_restrictions_status: self.emergency_restrictions,
+        }
+    }
+
+    pub fn rag_status(&self) -> SystemRAGStatus {
+        if self.emergency_restrictions {
+            SystemRAGStatus::Red
+        } else {
+            SystemRAGStatus::Green
         }
     }
 }

@@ -2,6 +2,7 @@ use uom::ConstZero;
 use uom::si::f32::Power;
 
 use crate::display::demand_management::CommsDisplay;
+use crate::display::system_integrity::SystemRAGStatus;
 use crate::event::Event;
 use crate::tick_context::TickContext;
 
@@ -41,7 +42,13 @@ impl Communications {
         }
     }
 
-
+    pub fn rag_status(&self) -> SystemRAGStatus {
+        if self.offline {
+            SystemRAGStatus::Red
+        } else {
+            SystemRAGStatus::Green
+        }
+    }
 }
 
 #[cfg(test)]

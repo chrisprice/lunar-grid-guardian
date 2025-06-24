@@ -1,3 +1,4 @@
+use crate::display::system_integrity::SystemRAGStatus;
 use crate::game_variables::GameVariables;
 use crate::lunar_phase::LunarPhase;
 use crate::system::state::State;
@@ -64,6 +65,10 @@ impl Solar {
 
     pub fn repair_boost(&mut self, game_vars: &GameVariables) {
         self.state.repair_boost(game_vars);
+    }
+
+    pub fn rag_status(&self) -> SystemRAGStatus {
+        (&self.state).into()
     }
 }
 

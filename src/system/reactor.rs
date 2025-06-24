@@ -1,4 +1,5 @@
 use crate::ConstOne;
+use crate::display::system_integrity::SystemRAGStatus;
 use crate::game_variables::GameVariables;
 use crate::system::state::State;
 use crate::tick_context::TickContext;
@@ -90,6 +91,10 @@ impl Reactor {
 
     pub fn repair_boost(&mut self, game_vars: &GameVariables) {
         self.state.repair_boost(game_vars);
+    }
+
+    pub fn rag_status(&self) -> SystemRAGStatus {
+        (&self.state).into()
     }
 }
 

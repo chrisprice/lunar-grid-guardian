@@ -1,10 +1,22 @@
 use uom::si::f32::Time;
 
+use crate::system::state::State;
+
 pub enum SystemRAGStatus {
     Green,
     Amber,
     Red,
     ThrobbingAmber,
+}
+
+impl From<&State> for SystemRAGStatus {
+    fn from(state: &State) -> Self {
+        match state {
+            State::Online { .. } => SystemRAGStatus::Green,
+            State::Offline => SystemRAGStatus::Red,
+            State::Repairing { .. } => SystemRAGStatus::ThrobbingAmber,
+        }
+    }
 }
 
 pub struct SystemIntegrity {

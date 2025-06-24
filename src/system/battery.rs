@@ -98,6 +98,10 @@ impl Battery {
     pub fn repair_boost(&mut self, game_vars: &GameVariables) {
         self.state.repair_boost(game_vars);
     }
+
+    pub fn rag_status(&self) -> crate::display::system_integrity::SystemRAGStatus {
+        (&self.state).into()
+    }
 }
 
 #[cfg(test)]

@@ -4,6 +4,7 @@ use uom::si::f32::Power;
 use uom::si::f32::Time;
 
 use crate::display::demand_management::OperationsDisplay;
+use crate::display::system_integrity::SystemRAGStatus;
 
 #[derive(Debug, Default)]
 pub enum SupplyDrop {
@@ -109,6 +110,14 @@ impl Operations {
             online_status: !self.offline,
             pending_docking_indicator,
             next_supply_drop_timer,
+        }
+    }
+
+    pub fn rag_status(&self) -> SystemRAGStatus {
+        if self.offline {
+            SystemRAGStatus::Red
+        } else {
+            SystemRAGStatus::Green
         }
     }
 }
